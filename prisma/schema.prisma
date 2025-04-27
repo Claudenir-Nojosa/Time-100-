@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Usuario {
+  id                   String    @id @default(cuid())
+  name                 String
+  email                String    @unique
+  password             String?
+  image                String?
+  subscriptionStatus   String    @default("free")
+  stripeSubscriptionId String?
+  stripeCustomerId     String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  Account              Account[]
+  Empresa              Empresa[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  usuarioId         String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@unique([provider, providerAccountId])
+}
+
+model Empresa {
+  id                   String                      @id @default(cuid())
+  razaoSocial          String
+  nomeFantasia         String?
+  cnpj                 String                      @unique
+  inscricaoEstadual    String?
+  telefone             String?
+  email                String?
+  endereco             String?
+  cidade               String?
+  uf                   String
+  cep                  String?
+  regimeTributacao     RegimeTributacao
+  responsavel          String
+  observacoes          String?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  usuarioId            String
+  obrigacoesAcessorias EmpresaObrigacaoAcessoria[]
+  obrigacoesPrincipais EmpresaObrigacaoPrincipal[]
+  parcelamentos        Parcelamento[]
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+}
+
+enum RegimeTributacao {
+  SIMPLES_NACIONAL
+  LUCRO_PRESUMIDO
+  LUCRO_REAL
+}
+
+model ObrigacaoAcessoria {
+  id            String                      @id @default(cuid())
+  nome          String                      @unique
+  descricao     String?
+  periodicidade String
+  empresas      EmpresaObrigacaoAcessoria[]
+}
+
+model ObrigacaoPrincipal {
+  id        String                      @id @default(cuid())
+  nome      String                      @unique
+  descricao String?
+  empresas  EmpresaObrigacaoPrincipal[]
+}
+
+model EmpresaObrigacaoAcessoria {
+  id                String   @id @default(cuid())
+  empresa           Empresa  @relation(fields: [empresaId], references: [id])
+  empresaId         String
+  obrigacaoAcessoria ObrigacaoAcessoria @relation(fields: [obrigacaoAcessoriaId], references: [id])
+  obrigacaoAcessoriaId String
+  diaVencimento     Int      // Dia base do vencimento (ex: 20)
+  anteciparDiaNaoUtil Boolean @default(false) // Se true, antecipa; se false, posterga
+  observacoes       String?
+
+  @@unique([empresaId, obrigacaoAcessoriaId])
+}
+
+model EmpresaObrigacaoPrincipal {
+  id                  String   @id @default(cuid())
+  empresa             Empresa  @relation(fields: [empresaId], references: [id])
+  empresaId           String
+  obrigacaoPrincipal  ObrigacaoPrincipal @relation(fields: [obrigacaoPrincipalId], references: [id])
+  obrigacaoPrincipalId String
+  aliquota            Float
+  diaVencimento       Int
+  anteciparDiaNaoUtil Boolean
+  descricao           String?  // Nova campo para identificar o tipo de ICMS
+  uf                  String?  // Para vincular a um estado específico
+  observacoes         String?
+
+  @@unique([empresaId, obrigacaoPrincipalId, descricao, uf]) // Chave composta
+}
+
+model Parcelamento {
+  id             String             @id @default(cuid())
+  empresa        Empresa            @relation(fields: [empresaId], references: [id])
+  empresaId      String
+  numero         Int
+  valor          Float
+  dataVencimento DateTime
+  status         StatusParcelamento @default(PENDENTE)
+  observacoes    String?
+
+  @@unique([empresaId, numero])
+}
+
+enum StatusParcelamento {
+  PENDENTE
+  PAGO
+  ATRASADO
+  CANCELADO
+}
+
+model Atividade {
+  id          String   @id @default(cuid())
+  nome        String
+  horario     String?
+  responsavel String
+  data        DateTime
+  concluida   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
