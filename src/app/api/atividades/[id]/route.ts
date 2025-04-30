@@ -24,7 +24,7 @@ export async function DELETE(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } } 
 ) {
   try {
     const { id } = params;
