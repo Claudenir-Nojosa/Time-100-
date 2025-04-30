@@ -12,19 +12,46 @@ import {
 } from "@/components/ui/dialog";
 import { useSession } from "next-auth/react";
 import { CalendarSkeleton } from "@/components/shared/CalendarSkeleton";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useRouter } from "next/navigation";
 
 interface Atividade {
   id: string;
   nome: string;
   horario?: string;
   responsavel: string;
+  responsavelId: string;
+  responsavelImg?: string;
   data: Date;
   concluida: boolean;
 }
 
 export default function CalendarioPage() {
   const session = useSession();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [atividades, setAtividades] = useState<Atividade[]>([]);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [atividadeParaExcluir, setAtividadeParaExcluir] = useState<
+    string | null
+  >(null);
+  const [atividadeParaEditar, setAtividadeParaEditar] =
+    useState<Atividade | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [novaAtividade, setNovaAtividade] = useState({
+    nome: "",
+    horario: "",
+    responsavel: session.data?.user.name || "",
+  });
+
+  // 2. Agora os effects
+  useEffect(() => {
+    if (session.status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [session.status, router]);
 
   useEffect(() => {
     const fetchAtividades = async () => {
@@ -40,23 +67,19 @@ export default function CalendarioPage() {
       }
     };
 
-    fetchAtividades();
-  }, []);
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [atividades, setAtividades] = useState<Atividade[]>([]);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [atividadeParaExcluir, setAtividadeParaExcluir] = useState<
-    string | null
-  >(null);
-  const [atividadeParaEditar, setAtividadeParaEditar] =
-    useState<Atividade | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [novaAtividade, setNovaAtividade] = useState({
-    nome: "",
-    horario: "",
-    responsavel: session.data?.user.name, // Substitua pelo nome do usuário logado
-  });
+    if (session.status === "authenticated") {
+      fetchAtividades();
+    }
+  }, [session.status]);
+
+  // 3. Condicionais de renderização só depois de todos os hooks
+  if (session.status === "loading") {
+    return <div>Carregando...</div>;
+  }
+
+  if (!session.data) {
+    return null;
+  }
 
   const handleToggleConcluida = async (atividade: Atividade) => {
     try {
@@ -113,21 +136,6 @@ export default function CalendarioPage() {
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
   const isWeekend = (dayIndex: number) => dayIndex === 0 || dayIndex === 6;
-
-  // Buscar atividades do banco de dados
-  useEffect(() => {
-    const fetchAtividades = async () => {
-      try {
-        const res = await fetch("/api/atividades");
-        const data = await res.json();
-        setAtividades(data);
-      } catch (error) {
-        console.error("Erro ao buscar atividades:", error);
-      }
-    };
-
-    fetchAtividades();
-  }, []);
 
   const handleDeleteAtividade = async () => {
     if (!atividadeParaExcluir) return;
@@ -214,6 +222,8 @@ export default function CalendarioPage() {
         },
         body: JSON.stringify({
           ...novaAtividade,
+          responsavelId: session.data?.user.id, // Adiciona o ID
+          responsavelImg: session.data?.user.image, // Adiciona a foto
           data: selectedDate.toISOString(),
         }),
       });
@@ -224,7 +234,7 @@ export default function CalendarioPage() {
       setNovaAtividade({
         nome: "",
         horario: "",
-        responsavel: session.data?.user.name,
+        responsavel: session.data?.user.name || "",
       });
       setOpenDialog(false);
     } catch (error) {
@@ -295,18 +305,39 @@ export default function CalendarioPage() {
               <div
                 key={atividade.id}
                 className={`text-xs p-1 rounded cursor-pointer relative group
-        ${atividade.concluida ? "bg-green-100 text-green-800 line-through" : "bg-blue-100 text-blue-800"}`}
+      ${atividade.concluida ? "bg-green-100 text-green-800 line-through" : "bg-blue-100 text-blue-800"}`}
                 onClick={() => handleToggleConcluida(atividade)}
               >
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    {atividade.horario && (
-                      <span className="font-medium">
-                        {atividade.horario} -{" "}
-                      </span>
-                    )}
-                    {atividade.nome}
+                <div className="flex justify-between items-center gap-2">
+                  {/* Avatar + Informações da atividade */}
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Avatar className="h-5 w-5 flex-shrink-0">
+                      <AvatarImage
+                        src={atividade.responsavelImg || ""}
+                        alt={atividade.responsavel}
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="text-xs bg-gray-100">
+                        {atividade.responsavel
+                          .split(" ")
+                          .slice(0, 2)
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex items-baseline gap-1 min-w-0">
+                      {atividade.horario && (
+                        <span className="font-medium text-xs whitespace-nowrap">
+                          {atividade.horario}
+                        </span>
+                      )}
+                      <span className="truncate text-xs">{atividade.nome}</span>
+                    </div>
                   </div>
+
+                  {/* Botões de ação (aparecem no hover) */}
                   <div className="flex">
                     <button
                       className="text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded-full p-0.5 ml-1"

@@ -138,12 +138,14 @@ enum StatusParcelamento {
 }
 
 model Atividade {
-  id          String   @id @default(cuid())
-  nome        String
-  horario     String?
-  responsavel String
-  data        DateTime
-  concluida   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  nome           String
+  horario        String?
+  responsavel    String
+  responsavelId  String   // Adicione este campo para relacionamento
+  responsavelImg String?  // Adicione este campo para a foto
+  data           DateTime
+  concluida      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

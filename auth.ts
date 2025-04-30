@@ -62,8 +62,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
           });
 
-          console.log("Novo usuário criado, redirecionando para onboarding");
-          return `/onboarding?userId=${newUser.id}`;
+         
         } else {
           // Verifica se o usuário já tem uma conta associada
           const existingAccount = await prisma.account.findFirst({

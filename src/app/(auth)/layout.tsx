@@ -1,5 +1,5 @@
 import Navbar from "@/components/shared/navbar";
-import { Plane } from "lucide-react";
+import { Handshake, Plane } from "lucide-react";
 import Link from "next/link";
 
 export default function AuthLayout({
@@ -9,9 +9,8 @@ export default function AuthLayout({
 }) {
   return (
     <section className="flex flex-col items-center justify-center py-40">
-      <Navbar/>
       <Link href={"/"}>
-        <Plane />
+      <Handshake />
       </Link>
       {children}
     </section>

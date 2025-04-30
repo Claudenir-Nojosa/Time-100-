@@ -50,6 +50,6 @@ export default async function registerAction(
   console.log("------ Server Action - Registrar Usuário ------");
   console.log(data);
 
-  // Redirecionar para a página de onboarding
+
   redirect(`/dashboard`);
 }
