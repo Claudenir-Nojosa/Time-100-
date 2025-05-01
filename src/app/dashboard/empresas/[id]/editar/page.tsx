@@ -63,13 +63,15 @@ const empresaSchema = z.object({
   ),
 });
 
+interface PageProps {
+  params: {
+    id: string;
+  };
+}
+
 type EmpresaFormValues = z.infer<typeof empresaSchema>;
 
-export default function EditarEmpresaPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function EditarEmpresaPage({ params }: PageProps) {
   const router = useRouter();
   const [obrigacoesAcessorias, setObrigacoesAcessorias] = useState<
     ObrigacaoAcessoria[]
