@@ -3,11 +3,12 @@ import db from "@/lib/db";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params; // Resolve a Promise primeiro
     const empresa = await db.empresa.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id }, // Agora acessa o id corretamente
       include: {
         obrigacoesAcessorias: {
           include: {
