@@ -15,8 +15,6 @@ export default tseslint.config(
       },
     },
   },
-  eslint.configs.recommended,
-  ...tseslint.configs.recommended,
   {
     plugins: {
       '@next/next': nextPlugin,
