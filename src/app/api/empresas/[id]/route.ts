@@ -3,11 +3,11 @@ import db from "@/lib/db";
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }  
+  { params }: { params: { id: string } }
 ) {
   try {
     const empresa = await db.empresa.findUnique({
-      where: { id: (await params).id },
+      where: { id: params.id },
       include: {
         obrigacoesAcessorias: {
           include: {
@@ -50,14 +50,14 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }  
+  { params }: { params: { id: string } }
 ) {
   try {
     const body = await request.json();
-await params
+
     // Atualiza a empresa
     const empresa = await db.empresa.update({
-      where: { id: (await params).id } ,
+      where: { id: params.id },
       data: {
         razaoSocial: body.razaoSocial,
         cnpj: body.cnpj,
@@ -87,7 +87,7 @@ await params
           // Cria nova
           return db.empresaObrigacaoAcessoria.create({
             data: {
-              empresaId: (await params).id,
+              empresaId: params.id,
               obrigacaoAcessoriaId: oa.obrigacaoAcessoriaId,
               diaVencimento: oa.diaVencimento,
               anteciparDiaNaoUtil: oa.anteciparDiaNaoUtil,
@@ -99,7 +99,7 @@ await params
 
     // Remove obrigações acessórias não enviadas
     const obrigacoesAcessoriasAtuais = await db.empresaObrigacaoAcessoria.findMany({
-      where: { empresaId: (await params).id },
+      where: { empresaId: params.id },
     });
 
     const obrigacoesAcessoriasParaRemover = obrigacoesAcessoriasAtuais.filter(
@@ -131,7 +131,7 @@ await params
           // Cria nova
           return db.empresaObrigacaoPrincipal.create({
             data: {
-              empresaId: (await params).id,
+              empresaId: params.id,
               obrigacaoPrincipalId: op.obrigacaoPrincipalId,
               diaVencimento: op.diaVencimento,
               anteciparDiaNaoUtil: op.anteciparDiaNaoUtil,
@@ -146,7 +146,7 @@ await params
 
     // Remove obrigações principais não enviadas
     const obrigacoesPrincipaisAtuais = await db.empresaObrigacaoPrincipal.findMany({
-      where: { empresaId: (await params).id },
+      where: { empresaId: params.id },
     });
 
     const obrigacoesPrincipaisParaRemover = obrigacoesPrincipaisAtuais.filter(
