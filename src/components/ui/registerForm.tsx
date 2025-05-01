@@ -54,7 +54,7 @@ export default function RegisterForm() {
         </div>
         <div>
           <Button
-            className="w-full mt-6 hover:bg-blue-400/85 bg-blue-400"
+            className="w-full mt-6 bg-gradient-to-r from-purple-400 to-fuchsia-500 hover:from-purple-300 hover:to-fuchsia-400 text-white font-medium rounded-md transition-all duration-300 shadow-[0_0_15px_-3px_rgba(217,70,239,0.4)] hover:shadow-[0_0_20px_-3px_rgba(217,70,239,0.6)]"
             type="submit"
           >
             {isPending ? (

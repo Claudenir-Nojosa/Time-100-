@@ -2,109 +2,138 @@
 @tailwind components;
 @tailwind utilities;
 
-html,body{
+html, body {
   height: 100%;
 }
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 224 71.4% 4.1%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 266, 100%, 50%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
-    --destructive: 0 84.2% 60.2%;
+    /* Light Mode - Futuristic Purple */
+    --foreground: 266 100% 10%;
+    --card-foreground: 266 100% 10%;
+    --popover: 255 255% 255%;
+    --popover-foreground: 266 100% 10%;
+    --primary: 266 100% 50%;
+    --primary-foreground: 255 255% 255%;
+    --secondary: 270 100% 96%;
+    --secondary-foreground: 266 100% 20%;
+    --muted: 270 20% 95%;
+    --muted-foreground: 266 20% 40%;
+    --accent: 275 100% 95%;
+    --accent-foreground: 266 100% 20%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 20% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 262.1 83.3% 57.8%;
+    --border: 270 30% 85%;
+    --input: 270 30% 85%;
+    --ring: 262 100% 50%;
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 249 100% 3.9%;
-    --foreground: 248 100% 88%;
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 266, 100%, 50%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 215 27.9% 16.9%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 30.9%;
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 210 20% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 247, 18.3%, 18.2%;
-    --input: 215 27.9% 16.9%;
-    --ring: 263.4 70% 50.4%;
+    /* Dark Mode - Neon Futuristic */
+    --background: 249 100% 3%;
+    --foreground: 270 100% 95%;
+    --card: 266 100% 5%;
+    --card-foreground: 270 100% 95%;
+    --popover: 266 100% 5%;
+    --popover-foreground: 270 100% 95%;
+    --primary: 266 100% 50%;
+    --primary-foreground: 270 100% 95%;
+    --secondary: 266 50% 15%;
+    --secondary-foreground: 270 100% 95%;
+    --muted: 266 30% 20%;
+    --muted-foreground: 270 20% 70%;
+    --accent: 275 60% 25%;
+    --accent-foreground: 270 100% 95%;
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 270 100% 95%;
+    --border: 266 30% 25%;
+    --input: 266 30% 25%;
+    --ring: 262 100% 60%;
   }
 }
 
-
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 5px 0px theme('colors.purple.500');
+  }
+  50% { 
+    box-shadow: 0 0 20px 5px theme('colors.fuchsia.500');
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 6px 0 rgba(192, 132, 252, 0.7); }
+  50% { box-shadow: 0 0 10px 2px rgba(192, 132, 252, 0.9); }
+}
+
+@keyframes text-glow {
+  0%, 100% { 
+    text-shadow: 0 0 5px theme('colors.purple.400');
+  }
+  50% { 
+    text-shadow: 0 0 15px theme('colors.fuchsia.400');
+  }
 }
 
 .skeleton-animate {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+.neon-glow {
+  animation: neon-pulse 3s ease-in-out infinite;
+}
+
+.text-glow {
+  animation: text-glow 3s ease-in-out infinite;
+}
+
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
+  
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-purple-500/30 rounded-full hover:bg-purple-500/50;
+  }
+}
+
+/* Animations */
+@keyframes slide {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes slide-vertical {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
 }
 
 .animate-slide {
   animation: 15s slide linear infinite;
 }
 
-@keyframes slide {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-100%);
-  }
+.animate-slide-vertical {
+  animation: 15s slide-vertical linear infinite;
 }
 
-.ce-popover-item:hover {
-  @apply bg-muted/40 transition-all !important;
-}
-
-.ce-popover--opened {
-  @apply bg-card outline-none border-border dark:text-muted;
-}
-
-.ce-popover-item__icon {
-  @apply dark:bg-background text-white font-medium shadow-none dark:border-[1px] !important;
-}
-
-.ce-popover-item__title {
-  @apply dark:text-Neutrals/neutrals-7 font-normal;
-}
-
-.cdx-search-field {
-  @apply bg-background;
-}
-
+/* Editor Styles */
 .ce-toolbar__content,
 .ce-block__content {
   max-width: 750px;
@@ -114,71 +143,7 @@ html,body{
   @apply border-none outline-none;
 }
 
-/* .dotPattern {
-  background-image: radial-gradient(rgb(25, 25, 25) 1px, transparent 1px);
-  background-size: 30px 30px;
-} */
-
-.ql-toolbar::-webkit-scrollbar {
-  display: none;
-}
-
-.ql-toolbar {
-  @apply flex flex-wrap items-center justify-center dark:bg-background/70 bg-white/40 backdrop-blur-md z-40 sticky top-0 !border-none left-0 right-0;
-}
-
-.ql-formats {
-  @apply flex flex-shrink-0;
-}
-
-.ql-container {
-  @apply !border-none;
-}
-
-.ql-editor > p,
-ol,
-ul {
-  @apply dark:text-washed-purple-700;
-}
-
-@keyframes slide-vertical {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-30%);
-  }
-}
-
-.animate-slide-vertical {
-  animation: 15s slide-vertical linear infinite;
-}
-
-/* Animação suave para expandir/recolher */
-.CollapsibleContent {
-  overflow: hidden;
-  transition: max-height 0.3s ease-out;
-}
-
-/* Estilo para o ícone ao passar o mouse */
-.CollapsibleTrigger:hover {
-  background-color: #f3f4f6; /* Cor de fundo ao passar o mouse */
-}
-
-@keyframes slide-vertical {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-50%);
-  }
-}
-
-.animate-slide-vertical {
-  animation: 15s slide-vertical linear infinite;
-}
-
-/* Gradiente para suavizar o desaparecimento dos cards */
+/* Carousel gradient effects */
 .carrossel-container {
   position: relative;
   overflow: hidden;
@@ -190,9 +155,9 @@ ul {
   position: absolute;
   left: 0;
   right: 0;
-  height: 100px; /* Altura do gradiente */
-  z-index: 2; /* Garante que o gradiente fique acima dos cards */
-  pointer-events: none; /* Permite interação com os cards */
+  height: 100px;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .carrossel-container::before {
@@ -203,4 +168,44 @@ ul {
 .carrossel-container::after {
   bottom: 0;
   background: linear-gradient(to top, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+}
+
+/* Collapsible transitions */
+.CollapsibleContent {
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+/* Light mode specific adjustments */
+@media (prefers-color-scheme: light) {
+  .neon-glow {
+    animation: neon-pulse 3s ease-in-out infinite alternate;
+  }
+  
+  .text-glow {
+    animation: text-glow 3s ease-in-out infinite alternate;
+  }
+  
+  .carrossel-container::before {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+  }
+  
+  .carrossel-container::after {
+    background: linear-gradient(to top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+  }
+}
+
+/* Special gradient text class */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-fuchsia-500;
+}
+
+/* Special border glow effect */
+.border-glow {
+  box-shadow: 0 0 10px theme('colors.purple.500');
+  transition: box-shadow 0.3s ease;
+}
+
+.border-glow:hover {
+  box-shadow: 0 0 20px theme('colors.fuchsia.500');
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, Plane } from "lucide-react"; // Ícone do menu hambúrguer
+import { Loader, Menu, Plane } from "lucide-react"; // Ícone do menu hambúrguer
 import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet"; // Para o menu mobile
 import {} from "@/components/ui/navigation-menu";
 import { NavigationMenuDemo } from "./navigationMenu";
@@ -14,7 +14,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo no lado esquerdo */}
           <Link href="/" className="text-xl font-bold">
-            <Plane/>
+            <Loader className="text-fuchsia-400 animate-pulse" />
           </Link>
           {/* Links no centro (visível apenas em telas maiores) */}
           <div className="hidden md:flex items-center gap-6">
@@ -30,11 +30,7 @@ export default function Navbar() {
           {/* Links no lado direito (visível apenas em telas maiores) */}
           <div className="hidden md:flex items-center gap-4">
             <Button variant="link">
-              <Link
-                href="/login"
-              >
-                Entrar
-              </Link>
+              <Link href="/login">Entrar</Link>
             </Button>
             <Button variant={"default"}>
               <Link href="/cadastro">Criar Conta</Link>

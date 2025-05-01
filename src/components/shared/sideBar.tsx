@@ -19,9 +19,13 @@ import {
   Plane,
   ChevronDown,
   ChevronRight,
+  Loader,
+  HandCoins,
+  PiggyBank,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession, signOut } from "next-auth/react";
+import { createSlug } from "@/lib/utils";
 
 interface SubmenuState {
   "obrigacoes-acessorias": boolean;
@@ -102,8 +106,8 @@ export default function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b">
         {!isCollapsed && (
           <div className="flex items-center space-x-2">
-            <Plane className="h-6 w-6" />
-            <span className="text-lg font-bold">TravelScript AI</span>
+            <Loader className="text-fuchsia-400 animate-pulse" />
+            <span className="text-lg font-bold">Time 100%</span>
           </div>
         )}
         <Button
@@ -159,7 +163,7 @@ export default function Sidebar() {
                 <li>
                   <Link
                     href="/dashboard/empresas/adicionar"
-                    className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm text-gray-600"
+                    className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm dark:hover:bg-muted text-gray-500"
                   >
                     <span className="ml-2">Adicionar Empresa</span>
                   </Link>
@@ -167,7 +171,7 @@ export default function Sidebar() {
                 <li>
                   <Link
                     href="/dashboard/empresas/claudenir"
-                    className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm text-gray-600"
+                    className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm dark:hover:bg-muted text-gray-500"
                   >
                     <span className="ml-2">Claudenir</span>
                   </Link>
@@ -175,7 +179,7 @@ export default function Sidebar() {
                 <li>
                   <Link
                     href="/dashboard/empresas/ana-conrado"
-                    className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm text-gray-600"
+                    className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm dark:hover:bg-muted text-gray-500"
                   >
                     <span className="ml-2">Ana Conrado</span>
                   </Link>
@@ -232,8 +236,8 @@ export default function Sidebar() {
                 ].map((item) => (
                   <li key={item}>
                     <Link
-                      href={`/dashboard/obrigacoes/${item.toLowerCase().replace(/\s+/g, "-")}`}
-                      className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm text-gray-600"
+                      href={`/dashboard/obrigacoes/${createSlug(item)}`}
+                      className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm dark:hover:bg-muted text-gray-500"
                     >
                       <span className="ml-2">{item}</span>
                     </Link>
@@ -252,7 +256,7 @@ export default function Sidebar() {
               }`}
             >
               <div className="flex items-center">
-                <Layers className="h-5 w-5" />
+                <HandCoins className="h-5 w-5" />
                 {!isCollapsed && (
                   <span className="ml-2">Obrigações Principais</span>
                 )}
@@ -270,7 +274,7 @@ export default function Sidebar() {
                   <li key={item}>
                     <Link
                       href={`/dashboard/obrigacoes/${item.toLowerCase()}`}
-                      className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm text-gray-600"
+                      className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm dark:hover:bg-muted text-gray-500"
                     >
                       <span className="ml-2">{item}</span>
                     </Link>
@@ -294,12 +298,12 @@ export default function Sidebar() {
 
           <li>
             <Link
-              href="/dashboard/pendencias"
+              href="/dashboard/parcelamentos"
               className={`flex items-center p-2 rounded-lg hover:bg-muted ${
                 isCollapsed ? "justify-center" : ""
               }`}
             >
-              <AlertCircle className="h-5 w-5" />
+              <PiggyBank className="h-5 w-5" />
               {!isCollapsed && <span className="ml-2">Parcelamentos</span>}
             </Link>
           </li>

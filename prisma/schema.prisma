@@ -21,6 +21,8 @@ model Usuario {
   updatedAt            DateTime  @updatedAt
   Account              Account[]
   Empresa              Empresa[]
+
+  Pendencia Pendencia[]
 }
 
 model Account {
@@ -85,30 +87,47 @@ model ObrigacaoPrincipal {
 }
 
 model EmpresaObrigacaoAcessoria {
-  id                String   @id @default(cuid())
-  empresa           Empresa  @relation(fields: [empresaId], references: [id])
-  empresaId         String
-  obrigacaoAcessoria ObrigacaoAcessoria @relation(fields: [obrigacaoAcessoriaId], references: [id])
+  id                   String                      @id @default(cuid())
+  empresa              Empresa                     @relation(fields: [empresaId], references: [id])
+  empresaId            String
+  obrigacaoAcessoria   ObrigacaoAcessoria          @relation(fields: [obrigacaoAcessoriaId], references: [id])
   obrigacaoAcessoriaId String
-  diaVencimento     Int      // Dia base do vencimento (ex: 20)
-  anteciparDiaNaoUtil Boolean @default(false) // Se true, antecipa; se false, posterga
-  observacoes       String?
+  diaVencimento        Int
+  anteciparDiaNaoUtil  Boolean                     @default(false)
+  observacoes          String?
+  entregas             EntregaObrigacaoAcessoria[]
 
   @@unique([empresaId, obrigacaoAcessoriaId])
 }
 
+model EntregaObrigacaoAcessoria {
+  id                 String    @id @default(cuid())
+  empresaObrigacaoId String
+  mes                Int
+  ano                Int
+  entregue           Boolean   @default(false)
+  dataEntrega        DateTime?
+  observacoes        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  empresaObrigacao EmpresaObrigacaoAcessoria @relation(fields: [empresaObrigacaoId], references: [id])
+
+  @@unique([empresaObrigacaoId, mes, ano])
+}
+
 model EmpresaObrigacaoPrincipal {
-  id                  String   @id @default(cuid())
-  empresa             Empresa  @relation(fields: [empresaId], references: [id])
-  empresaId           String
-  obrigacaoPrincipal  ObrigacaoPrincipal @relation(fields: [obrigacaoPrincipalId], references: [id])
+  id                   String             @id @default(cuid())
+  empresa              Empresa            @relation(fields: [empresaId], references: [id])
+  empresaId            String
+  obrigacaoPrincipal   ObrigacaoPrincipal @relation(fields: [obrigacaoPrincipalId], references: [id])
   obrigacaoPrincipalId String
-  aliquota            Float
-  diaVencimento       Int
-  anteciparDiaNaoUtil Boolean
-  descricao           String?  // Nova campo para identificar o tipo de ICMS
-  uf                  String?  // Para vincular a um estado específico
-  observacoes         String?
+  aliquota             Float
+  diaVencimento        Int
+  anteciparDiaNaoUtil  Boolean
+  descricao            String? // Nova campo para identificar o tipo de ICMS
+  uf                   String? // Para vincular a um estado específico
+  observacoes          String?
 
   @@unique([empresaId, obrigacaoPrincipalId, descricao, uf]) // Chave composta
 }
@@ -138,10 +157,21 @@ model Atividade {
   nome           String
   horario        String?
   responsavel    String
-  responsavelId  String   // Adicione este campo para relacionamento
-  responsavelImg String?  // Adicione este campo para a foto
+  responsavelId  String // Adicione este campo para relacionamento
+  responsavelImg String? // Adicione este campo para a foto
   data           DateTime
   concluida      Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model Pendencia {
+  id          String   @id @default(cuid())
+  titulo      String
+  descricao   String?
+  concluida   Boolean  @default(false)
+  criadoEm    DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId   String
 }

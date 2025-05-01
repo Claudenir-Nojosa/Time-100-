@@ -14,6 +14,7 @@ import { useSession } from "next-auth/react";
 import { CalendarSkeleton } from "@/components/shared/CalendarSkeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
+import { toast, Toaster } from "sonner";
 
 interface Atividade {
   id: string;
@@ -137,24 +138,6 @@ export default function CalendarioPage() {
 
   const isWeekend = (dayIndex: number) => dayIndex === 0 || dayIndex === 6;
 
-  const handleDeleteAtividade = async () => {
-    if (!atividadeParaExcluir) return;
-
-    try {
-      const res = await fetch(`/api/atividades/${atividadeParaExcluir}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        setAtividades(atividades.filter((a) => a.id !== atividadeParaExcluir));
-        setOpenDeleteDialog(false);
-        setAtividadeParaExcluir(null);
-      }
-    } catch (error) {
-      console.error("Erro ao deletar atividade:", error);
-    }
-  };
-
   const handleEditAtividade = (atividade: Atividade) => {
     setAtividadeParaEditar(atividade);
     setNovaAtividade({
@@ -164,40 +147,6 @@ export default function CalendarioPage() {
     });
     setSelectedDate(new Date(atividade.data));
     setOpenDialog(true);
-  };
-
-  const handleUpdateAtividade = async () => {
-    if (!atividadeParaEditar || !novaAtividade.nome) return;
-
-    try {
-      const res = await fetch(`/api/atividades/${atividadeParaEditar.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...novaAtividade,
-          data: selectedDate?.toISOString(),
-        }),
-      });
-
-      const atividadeAtualizada = await res.json();
-      setAtividades(
-        atividades.map((a) =>
-          a.id === atividadeParaEditar.id ? atividadeAtualizada : a
-        )
-      );
-
-      setAtividadeParaEditar(null);
-      setNovaAtividade({
-        nome: "",
-        horario: "",
-        responsavel: session.data?.user.name,
-      });
-      setOpenDialog(false);
-    } catch (error) {
-      console.error("Erro ao atualizar atividade:", error);
-    }
   };
 
   const handleOpenDialog = (date: Date) => {
@@ -211,33 +160,108 @@ export default function CalendarioPage() {
     setOpenDialog(true);
   };
 
+  const handleDeleteAtividade = async () => {
+    if (!atividadeParaExcluir) return;
+
+    const atividade = atividades.find((a) => a.id === atividadeParaExcluir);
+    const atividadeNome = atividade?.nome || "Atividade";
+
+    try {
+      const deletePromise = fetch(`/api/atividades/${atividadeParaExcluir}`, {
+        method: "DELETE",
+      });
+
+      toast.promise(deletePromise, {
+        loading: `Excluindo "${atividadeNome}"...`,
+        success: () => {
+          setAtividades(
+            atividades.filter((a) => a.id !== atividadeParaExcluir)
+          );
+          setOpenDeleteDialog(false);
+          setAtividadeParaExcluir(null);
+          return `"${atividadeNome}" excluída com sucesso!`;
+        },
+        error: () => `Erro ao excluir "${atividadeNome}"`,
+      });
+    } catch (error) {
+      toast.error("Ocorreu um erro ao excluir a atividade");
+      console.error("Erro ao deletar atividade:", error);
+    }
+  };
+
+  const handleUpdateAtividade = async () => {
+    if (!atividadeParaEditar || !novaAtividade.nome) return;
+
+    try {
+      const updatePromise = fetch(`/api/atividades/${atividadeParaEditar.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...novaAtividade,
+          data: selectedDate?.toISOString(),
+        }),
+      }).then((res) => res.json());
+
+      toast.promise(updatePromise, {
+        loading: `Atualizando "${novaAtividade.nome}"...`,
+        success: (atividadeAtualizada) => {
+          setAtividades(
+            atividades.map((a) =>
+              a.id === atividadeParaEditar.id ? atividadeAtualizada : a
+            )
+          );
+          setAtividadeParaEditar(null);
+          setNovaAtividade({
+            nome: "",
+            horario: "",
+            responsavel: session.data?.user.name || "",
+          });
+          setOpenDialog(false);
+          return `"${novaAtividade.nome}" atualizada com sucesso!`;
+        },
+        error: () => `Erro ao atualizar "${novaAtividade.nome}"`,
+      });
+    } catch (error) {
+      toast.error("Ocorreu um erro ao atualizar a atividade");
+      console.error("Erro ao atualizar atividade:", error);
+    }
+  };
+
   const handleAddAtividade = async () => {
     if (!selectedDate || !novaAtividade.nome) return;
 
     try {
-      const res = await fetch("/api/atividades", {
+      const createPromise = fetch("/api/atividades", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...novaAtividade,
-          responsavelId: session.data?.user.id, // Adiciona o ID
-          responsavelImg: session.data?.user.image, // Adiciona a foto
+          responsavelId: session.data?.user.id,
+          responsavelImg: session.data?.user.image,
           data: selectedDate.toISOString(),
         }),
-      });
+      }).then((res) => res.json());
 
-      const atividadeCriada = await res.json();
-      setAtividades([...atividades, atividadeCriada]);
-
-      setNovaAtividade({
-        nome: "",
-        horario: "",
-        responsavel: session.data?.user.name || "",
+      toast.promise(createPromise, {
+        loading: `Criando "${novaAtividade.nome}"...`,
+        success: (atividadeCriada) => {
+          setAtividades([...atividades, atividadeCriada]);
+          setNovaAtividade({
+            nome: "",
+            horario: "",
+            responsavel: session.data?.user.name || "",
+          });
+          setOpenDialog(false);
+          return `"${novaAtividade.nome}" criada com sucesso!`;
+        },
+        error: () => `Erro ao criar "${novaAtividade.nome}"`,
       });
-      setOpenDialog(false);
     } catch (error) {
+      toast.error("Ocorreu um erro ao criar a atividade");
       console.error("Erro ao criar atividade:", error);
     }
   };
@@ -264,7 +288,11 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`empty-${i}`}
-          className={`h-32 p-2 border border-gray-100 ${isWeekend(dayIndex) ? "bg-gray-50" : "bg-white"} text-gray-300`}
+          className={`h-32 p-2 border dark:border-purple-900/40 ${
+            isWeekend(dayIndex)
+              ? "dark:bg-gray-900 bg-purple-50/30"
+              : "dark:bg-gray-950 bg-white"
+          } text-gray-400 dark:text-purple-500/70`}
         >
           <div className="flex justify-between items-start">
             <span>{prevDate.getDate()}</span>
@@ -283,13 +311,25 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`day-${i}`}
-          className={`h-32 p-2 border border-gray-100 transition-all
-            ${isToday ? "bg-blue-50 border-blue-200" : ""}
-            ${isWeekend(dayIndex) ? "bg-gray-50" : "bg-white"}`}
+          className={`h-32 p-2 border dark:border-purple-900/40 transition-all
+          ${
+            isToday
+              ? "dark:bg-purple-900/30 bg-purple-100 border-purple-300 dark:border-purple-600"
+              : ""
+          }
+          ${
+            isWeekend(dayIndex)
+              ? "dark:bg-gray-900 bg-purple-50/30"
+              : "dark:bg-gray-950 bg-white"
+          }`}
         >
           <div className="flex justify-between items-start">
             <span
-              className={`text-sm font-medium ${isToday ? "bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center" : ""}`}
+              className={`text-sm font-medium ${
+                isToday
+                  ? "bg-gradient-to-br from-purple-500 via-purple-600 to-fuchsia-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-[0_0_6px_0_rgba(192,132,252,0.7)]"
+                  : "dark:text-purple-100 text-gray-800 "
+              }`}
             >
               {i}
             </span>
@@ -378,7 +418,11 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`next-${i}`}
-          className={`h-32 p-2 border border-gray-100 ${isWeekend(dayIndex) ? "bg-gray-50" : "bg-white"} text-gray-300`}
+          className={`h-32 p-2 border dark:border-purple-900/40 ${
+            isWeekend(dayIndex)
+              ? "dark:bg-gray-900 bg-purple-50/30"
+              : "dark:bg-gray-950 bg-white"
+          } text-gray-400 dark:text-purple-500/70`}
         >
           <div className="flex justify-between items-start">
             <span>{i}</span>
@@ -391,76 +435,77 @@ export default function CalendarioPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4 dark:bg-black mt-10">
       {/* Cabeçalho */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold text-gray-800">Calendário</h1>
-        <div className="flex items-center space-x-4 bg-white rounded-lg shadow-sm p-2 border border-gray-100">
+        <h1 className="text-3xl font-bold dark:text-purple-100 text-gray-800">
+          Calendário
+        </h1>
+        <div className="flex items-center space-x-4 dark:bg-purple-950/20 bg-white rounded-lg shadow-sm p-2 border dark:border-purple-900/30 border-gray-200">
           <Button
             variant="ghost"
             size="sm"
             onClick={prevMonth}
-            className="hover:bg-gray-100 rounded-full p-2"
+            className="dark:hover:bg-purple-900/30 hover:bg-purple-100 rounded-full p-2"
           >
-            <ChevronLeft className="h-5 w-5 text-gray-600" />
+            <ChevronLeft className="h-5 w-5 dark:text-purple-300 text-purple-600" />
           </Button>
-          <h2 className="text-xl font-semibold text-gray-700 min-w-[180px] text-center">
+          <h2 className="text-xl font-semibold dark:text-purple-100 text-gray-700 min-w-[180px] text-center">
             {monthNames[month]} {year}
           </h2>
           <Button
             variant="ghost"
             size="sm"
             onClick={nextMonth}
-            className="hover:bg-gray-100 rounded-full p-2"
+            className="dark:hover:bg-purple-900/30 hover:bg-purple-100 rounded-full p-2"
           >
-            <ChevronRight className="h-5 w-5 text-gray-600" />
+            <ChevronRight className="h-5 w-5 dark:text-purple-300 text-purple-600" />
           </Button>
         </div>
       </div>
 
       {/* Grid do Calendário */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-        <div className="grid grid-cols-7 gap-px bg-gray-50 border-b border-gray-100">
+      <div className="dark:bg-purple-950/10 bg-white rounded-xl shadow-sm overflow-hidden border dark:border-purple-900/30 border-gray-200">
+        <div className="grid grid-cols-7 gap-px dark:bg-purple-950/20 bg-gray-50 border-b dark:border-purple-900/30 border-gray-200">
           {dayNames.map((day, index) => (
             <div
               key={day}
               className={`py-3 text-center font-medium text-sm 
-                ${isWeekend(index) ? "text-gray-600 bg-gray-50" : "text-gray-700"}`}
+                ${
+                  isWeekend(index)
+                    ? "dark:text-purple-300 text-purple-600 dark:bg-purple-950/10 bg-purple-50/30"
+                    : "dark:text-purple-100 text-gray-700"
+                }`}
             >
               {day}
             </div>
           ))}
         </div>
-        {/* Skeleton ou conteúdo real */}
+
         {isLoading ? (
           <CalendarSkeleton />
         ) : (
-          <div className="grid grid-cols-7 gap-px bg-gray-100">
+          <div className="grid grid-cols-7 gap-px dark:bg-gray-950 bg-gray-100">
             {renderDays()}
           </div>
         )}
       </div>
 
-      {/* Dialog para adicionar atividade */}
+      {/* Dialog para adicionar/editar atividade */}
       <Dialog
         open={openDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            setOpenDialog(false);
-            setAtividadeParaEditar(null);
-          }
-        }}
+        onOpenChange={(open) => !open && setOpenDialog(false)}
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-purple-900/30 bg-white">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="dark:text-purple-100">
               {atividadeParaEditar ? "Editar Atividade" : "Nova Atividade"}
             </DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="nome" className="text-right">
+              <label htmlFor="nome" className="text-right dark:text-purple-200">
                 Nome:
               </label>
               <Input
@@ -469,13 +514,16 @@ export default function CalendarioPage() {
                 onChange={(e) =>
                   setNovaAtividade({ ...novaAtividade, nome: e.target.value })
                 }
-                className="col-span-3"
+                className="col-span-3 dark:bg-purple-950/20 dark:border-purple-900/30"
                 placeholder="Nome da atividade"
                 required
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="horario" className="text-right">
+              <label
+                htmlFor="horario"
+                className="text-right dark:text-purple-200"
+              >
                 Horário:
               </label>
               <Input
@@ -488,29 +536,32 @@ export default function CalendarioPage() {
                     horario: e.target.value,
                   })
                 }
-                className="col-span-3"
+                className="col-span-3 dark:bg-purple-950/20 dark:border-purple-900/30"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="responsavel" className="text-right">
+              <label
+                htmlFor="responsavel"
+                className="text-right dark:text-purple-200"
+              >
                 Responsável:
               </label>
               <Input
                 id="responsavel"
                 value={novaAtividade.responsavel}
                 readOnly
-                className="col-span-3 bg-gray-100"
+                className="col-span-3 dark:bg-purple-950/30 dark:border-purple-900/30"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="data" className="text-right">
+              <label htmlFor="data" className="text-right dark:text-purple-200">
                 Data:
               </label>
               <Input
                 id="data"
                 value={selectedDate?.toLocaleDateString("pt-BR")}
                 readOnly
-                className="col-span-3 bg-gray-100"
+                className="col-span-3 dark:bg-purple-950/30 dark:border-purple-900/30"
               />
             </div>
           </div>
@@ -518,14 +569,13 @@ export default function CalendarioPage() {
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
-              onClick={() => {
-                setOpenDialog(false);
-                setAtividadeParaEditar(null);
-              }}
+              className="dark:border-purple-900/30 dark:hover:bg-purple-900/20"
+              onClick={() => setOpenDialog(false)}
             >
               Cancelar
             </Button>
             <Button
+              className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white"
               onClick={
                 atividadeParaEditar ? handleUpdateAtividade : handleAddAtividade
               }
@@ -537,20 +587,30 @@ export default function CalendarioPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog de confirmação de exclusão */}
       <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-purple-900/30 bg-white border-2">
           <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogTitle className="dark:text-purple-100">
+              Confirmar Exclusão
+            </DialogTitle>
           </DialogHeader>
-          <p>Tem certeza que deseja excluir esta atividade?</p>
+          <p className="dark:text-purple-200">
+            Tem certeza que deseja excluir esta atividade?
+          </p>
           <div className="flex justify-end gap-2 mt-4">
             <Button
               variant="outline"
+              className="dark:border-purple-900/30 dark:hover:bg-purple-900/20"
               onClick={() => setOpenDeleteDialog(false)}
             >
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleDeleteAtividade}>
+            <Button
+              variant="destructive"
+              className="dark:bg-red-900/80 dark:hover:bg-red-900"
+              onClick={handleDeleteAtividade}
+            >
               Confirmar
             </Button>
           </div>

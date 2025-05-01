@@ -1,5 +1,5 @@
 {
-  "name": "travelscript-ai",
+  "name": "time-100",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -46,6 +46,7 @@
     "react-confetti": "^6.3.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.56.1",
+    "recharts": "^2.15.3",
     "sonner": "^2.0.1",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",

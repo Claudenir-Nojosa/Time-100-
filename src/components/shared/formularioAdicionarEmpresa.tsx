@@ -450,6 +450,7 @@ export function AdicionarEmpresaForm() {
     <Card className="max-w-3xl mx-auto">
       <CardHeader>
         <CardTitle className="text-xl">
+          <h1 className="text-2xl font-bold mb-6">Adicionar Nova Empresa</h1>
           {step === 1 && "Informações Gerais"}
           {step === 2 && "Obrigações Acessórias"}
           {step === 3 && "Obrigações Principais"}

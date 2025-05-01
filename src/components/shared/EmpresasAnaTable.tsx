@@ -30,25 +30,43 @@ const columns: ColumnDef<Empresa>[] = [
   {
     accessorKey: "razaoSocial",
     header: "Razão Social",
+    cell: ({ row }) => (
+      <span className="dark:text-purple-100 text-gray-800 font-medium">
+        {row.getValue("razaoSocial")}
+      </span>
+    ),
   },
   {
     accessorKey: "cnpj",
     header: "CNPJ",
     cell: ({ row }) => {
       const cnpj = row.getValue("cnpj");
-      return cnpj ? formatCNPJ(cnpj as string) : "-";
+      return (
+        <span className="dark:text-purple-200 text-gray-700">
+          {cnpj ? formatCNPJ(cnpj as string) : "-"}
+        </span>
+      );
     },
   },
   {
     accessorKey: "uf",
     header: "UF",
+    cell: ({ row }) => (
+      <span className="dark:text-purple-200 text-gray-700">
+        {row.getValue("uf")}
+      </span>
+    ),
   },
   {
     accessorKey: "regimeTributacao",
     header: "Regime",
     cell: ({ row }) => {
       const regime = row.getValue("regimeTributacao");
-      return formatRegime(regime as string);
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium dark:bg-purple-900/30 dark:text-purple-300 bg-purple-100 text-purple-800">
+          {formatRegime(regime as string)}
+        </span>
+      );
     },
   },
   {
@@ -57,7 +75,7 @@ const columns: ColumnDef<Empresa>[] = [
       return (
         <Link
           href={`/dashboard/empresas/${row.original.id}`}
-          className="text-primary hover:underline"
+          className="dark:text-purple-300 text-purple-600 hover:dark:text-purple-200 hover:text-purple-800 font-medium transition-colors"
         >
           Ver detalhes
         </Link>
@@ -90,7 +108,7 @@ export function EmpresasAnaTable() {
         const empresas = await response.json();
         setData(empresas);
       } catch (error) {
-        console.error("Erro ao buscar empresas da Ana Conrado:", error);
+        console.error("Erro ao buscar empresas da Ana:", error);
       } finally {
         setLoading(false);
       }
@@ -105,20 +123,30 @@ export function EmpresasAnaTable() {
   });
 
   if (loading) {
-    return <div className="text-center py-8">Carregando empresas da Ana Conrado...</div>;
+    return (
+      <div className="dark:text-purple-300 text-purple-600 text-center py-8 mt-10">
+        Carregando empresas da Ana...
+      </div>
+    );
   }
 
   return (
-    <div className="rounded-md border">
-      <div className="p-4 bg-primary text-white">
-        <h2 className="text-xl font-bold">Empresas da Ana Conrado</h2>
+    <div className="rounded-xl overflow-hidden dark:border-purple-900/30 border-gray-200 shadow-sm mt-10">
+      <div className="p-4 dark:bg-purple-700/20 bg-gray-100 border-b dark:border-purple-500/30 border-gray-200">
+        <h2 className="text-xl font-bold items-center text-center">Empresas da Ana</h2>
       </div>
-      <Table>
-        <TableHeader>
+      <Table className="border-collapse">
+        <TableHeader className="dark:bg-purple-950/20 bg-purple-50/30">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
+            <TableRow
+              key={headerGroup.id}
+              className="dark:border-purple-900/30 border-gray-200"
+            >
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
+                <TableHead
+                  key={header.id}
+                  className="dark:text-purple-300 text-purple-600 font-medium py-3 px-4"
+                >
                   {header.isPlaceholder
                     ? null
                     : flexRender(
@@ -135,10 +163,14 @@ export function EmpresasAnaTable() {
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
+                className="dark:border-purple-900/30 border-gray-200 dark:hover:bg-purple-900/10 hover:bg-purple-50/30 transition-colors"
                 data-state={row.getIsSelected() && "selected"}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell
+                    key={cell.id}
+                    className="py-3 px-4 dark:bg-gray-950 bg-white"
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -146,8 +178,11 @@ export function EmpresasAnaTable() {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                Nenhuma empresa cadastrada para a Ana Conrado
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center dark:text-purple-300 text-purple-600 dark:bg-gray-950 bg-white"
+              >
+                Nenhuma empresa cadastrada para a Ana
               </TableCell>
             </TableRow>
           )}
