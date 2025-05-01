@@ -52,14 +52,6 @@ const columns: ColumnDef<Empresa>[] = [
     },
   },
   {
-    accessorKey: "responsavel",
-    header: "Responsável",
-    cell: ({ row }) => {
-      const responsavel = row.getValue("responsavel");
-      return formatResponsavel(responsavel as string);
-    },
-  },
-  {
     id: "actions",
     cell: ({ row }) => {
       return (
@@ -87,31 +79,23 @@ function formatRegime(regime: string) {
   return regimes[regime] || regime;
 }
 
-function formatResponsavel(responsavel: string) {
-  const responsaveis: Record<string, string> = {
-    CLAUDENIR: "Claudenir",
-    ANA_CONRADO: "Ana Conrado"
-  };
-  return responsaveis[responsavel] || responsavel;
-}
-
-export function EmpresasTable() {
+export function EmpresasAnaTable() {
   const [data, setData] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchEmpresas() {
+    async function fetchEmpresasAna() {
       try {
-        const response = await fetch("/api/empresas");
+        const response = await fetch("/api/empresas?responsavel=ANA_CONRADO");
         const empresas = await response.json();
         setData(empresas);
       } catch (error) {
-        console.error("Erro ao buscar empresas:", error);
+        console.error("Erro ao buscar empresas da Ana Conrado:", error);
       } finally {
         setLoading(false);
       }
     }
-    fetchEmpresas();
+    fetchEmpresasAna();
   }, []);
 
   const table = useReactTable({
@@ -121,11 +105,14 @@ export function EmpresasTable() {
   });
 
   if (loading) {
-    return <div className="text-center py-8">Carregando empresas...</div>;
+    return <div className="text-center py-8">Carregando empresas da Ana Conrado...</div>;
   }
 
   return (
     <div className="rounded-md border">
+      <div className="p-4 bg-primary text-white">
+        <h2 className="text-xl font-bold">Empresas da Ana Conrado</h2>
+      </div>
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -160,7 +147,7 @@ export function EmpresasTable() {
           ) : (
             <TableRow>
               <TableCell colSpan={columns.length} className="h-24 text-center">
-                Nenhuma empresa cadastrada
+                Nenhuma empresa cadastrada para a Ana Conrado
               </TableCell>
             </TableRow>
           )}

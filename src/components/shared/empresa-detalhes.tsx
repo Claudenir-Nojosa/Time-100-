@@ -112,7 +112,7 @@ export function EmpresaDetalhes({ empresa }: EmpresaDetalhesProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mt-10">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">{empresa.razaoSocial}</h1>

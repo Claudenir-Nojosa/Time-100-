@@ -45,15 +45,11 @@ model Account {
 model Empresa {
   id                   String                      @id @default(cuid())
   razaoSocial          String
-  nomeFantasia         String?
   cnpj                 String                      @unique
   inscricaoEstadual    String?
-  telefone             String?
   email                String?
-  endereco             String?
   cidade               String?
   uf                   String
-  cep                  String?
   regimeTributacao     RegimeTributacao
   responsavel          String
   observacoes          String?

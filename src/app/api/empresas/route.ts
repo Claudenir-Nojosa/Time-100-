@@ -59,15 +59,10 @@ export async function POST(request: Request) {
     const novaEmpresa = await prisma.empresa.create({
       data: {
         razaoSocial: body.razaoSocial,
-        nomeFantasia: body.nomeFantasia,
         cnpj: body.cnpj,
-        inscricaoEstadual: body.inscricaoEstadual,
-        telefone: body.telefone,
         email: body.email,
-        endereco: body.endereco,
         cidade: body.cidade,
         uf: body.uf,
-        cep: body.cep,
         regimeTributacao: body.regimeTributacao,
         responsavel: body.responsavel,
         observacoes: body.observacoes,
@@ -157,9 +152,15 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const responsavel = searchParams.get('responsavel');
+
+    const where = responsavel ? { responsavel } : {};
+
     const empresas = await prisma.empresa.findMany({
+      where,
       select: {
         id: true,
         razaoSocial: true,
@@ -169,14 +170,15 @@ export async function GET() {
         responsavel: true,
       },
       orderBy: {
-        razaoSocial: "asc",
-      },
+        razaoSocial: 'asc'
+      }
     });
 
     return NextResponse.json(empresas);
   } catch (error) {
+    console.error('Erro ao buscar empresas:', error);
     return NextResponse.json(
-      { error: "Erro ao buscar empresas" },
+      { error: 'Erro ao buscar empresas' },
       { status: 500 }
     );
   }

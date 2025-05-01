@@ -1,7 +1,7 @@
 // components/AdicionarEmpresaForm.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,29 +31,51 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
+type ObrigacaoPrincipal = {
+  id: string;
+  nome: string;
+  descricao: string;
+};
+
+type ObrigacaoPrincipalSelecionada = {
+  id: string;
+  nome: string;
+  selecionada: boolean;
+  diaVencimento: number;
+  anteciparDiaNaoUtil: boolean;
+  temMultiplos?: boolean;
+  itens?: Array<{
+    diaVencimento: number;
+    anteciparDiaNaoUtil: boolean;
+    descricao: string;
+    uf: string;
+  }>;
+};
+
 // Adicione este tipo no início do arquivo
+type ObrigacaoAcessoria = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  periodicidade: string;
+};
+
 type ObrigacaoAcessoriaSelecionada = {
   id: string;
   nome: string;
   selecionada: boolean;
   diaVencimento: number;
-  anteciparDiaNaoUtil: boolean; // true = antecipa, false = posterga
+  anteciparDiaNaoUtil: boolean;
 };
-
 // Esquemas de validação para cada etapa
 const infoGeraisSchema = z.object({
   razaoSocial: z
     .string()
     .min(3, "Razão social deve ter pelo menos 3 caracteres"),
-  nomeFantasia: z.string().optional(),
   cnpj: z.string().min(14, "CNPJ deve ter 14 dígitos").max(14),
-  inscricaoEstadual: z.string().optional(),
-  telefone: z.string().optional(),
-  email: z.string().email("E-mail inválido").optional(),
-  endereco: z.string().optional(),
-  cidade: z.string().optional(),
-  uf: z.string().length(2, "UF deve ter 2 caracteres"),
-  cep: z.string().optional(),
+  email: z.string().min(1, "E-mail é obrigatório").email("E-mail inválido"),
+  cidade: z.string(),
+  uf: z.string().length(2, "UF inválida!"),
   regimeTributacao: z.enum([
     "SIMPLES_NACIONAL",
     "LUCRO_PRESUMIDO",
@@ -127,8 +149,8 @@ type FormValues = z.infer<typeof infoGeraisSchema> &
 // Dados mockados para as obrigações (você pode buscar do banco de dados)
 const obrigacoesAcessorias = [
   { id: "1", nome: "EFD ICMS IPI", periodicidade: "Mensal" },
-  { id: "2", nome: "DeSTDA", periodicidade: "Mensal" },
-  { id: "3", nome: "EFD Contribuições", periodicidade: "Mensal" },
+  { id: "3", nome: "DeSTDA", periodicidade: "Mensal" },
+  { id: "2", nome: "EFD Contribuições", periodicidade: "Mensal" },
   { id: "4", nome: "GIA", periodicidade: "Mensal" },
   { id: "5", nome: "DIME", periodicidade: "Mensal" },
 ];
@@ -152,58 +174,141 @@ const obrigacoesPrincipais = [
   },
 ];
 
+const estadosBrasileiros = [
+  { sigla: "AC", nome: "Acre" },
+  { sigla: "AL", nome: "Alagoas" },
+  { sigla: "AP", nome: "Amapá" },
+  { sigla: "AM", nome: "Amazonas" },
+  { sigla: "BA", nome: "Bahia" },
+  { sigla: "CE", nome: "Ceará" },
+  { sigla: "DF", nome: "Distrito Federal" },
+  { sigla: "ES", nome: "Espírito Santo" },
+  { sigla: "GO", nome: "Goiás" },
+  { sigla: "MA", nome: "Maranhão" },
+  { sigla: "MT", nome: "Mato Grosso" },
+  { sigla: "MS", nome: "Mato Grosso do Sul" },
+  { sigla: "MG", nome: "Minas Gerais" },
+  { sigla: "PA", nome: "Pará" },
+  { sigla: "PB", nome: "Paraíba" },
+  { sigla: "PR", nome: "Paraná" },
+  { sigla: "PE", nome: "Pernambuco" },
+  { sigla: "PI", nome: "Piauí" },
+  { sigla: "RJ", nome: "Rio de Janeiro" },
+  { sigla: "RN", nome: "Rio Grande do Norte" },
+  { sigla: "RS", nome: "Rio Grande do Sul" },
+  { sigla: "RO", nome: "Rondônia" },
+  { sigla: "RR", nome: "Roraima" },
+  { sigla: "SC", nome: "Santa Catarina" },
+  { sigla: "SP", nome: "São Paulo" },
+  { sigla: "SE", nome: "Sergipe" },
+  { sigla: "TO", nome: "Tocantins" },
+];
+
 export function AdicionarEmpresaForm() {
   const [step, setStep] = useState(1);
   const session = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [obrigacoesAcessorias, setObrigacoesAcessorias] = useState<
+    ObrigacaoAcessoria[]
+  >([]);
+  const [loadingObrigacoes, setLoadingObrigacoes] = useState(true);
+  const [obrigacoesPrincipais, setObrigacoesPrincipais] = useState<
+    ObrigacaoPrincipal[]
+  >([]);
+  const [loadingObrigacoesPrincipais, setLoadingObrigacoesPrincipais] =
+    useState(true);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       razaoSocial: "",
-      nomeFantasia: "",
       cnpj: "",
-      inscricaoEstadual: "",
-      telefone: "",
       email: "",
-      endereco: "",
       cidade: "",
       uf: "",
-      cep: "",
       regimeTributacao: "SIMPLES_NACIONAL",
       responsavel: "",
       observacoes: "",
-      obrigacoesAcessorias: obrigacoesAcessorias.map((obrigacao) => ({
-        id: obrigacao.id,
-        nome: obrigacao.nome,
-        selecionada: false,
-        diaVencimento: 20, // Valor padrão
-        anteciparDiaNaoUtil: false, // Padrão posterga
-      })),
-      obrigacoesPrincipais: obrigacoesPrincipais.map((obrigacao) => ({
-        id: obrigacao.id,
-        nome: obrigacao.nome,
-        selecionada: false,
-        aliquota: 0,
-        diaVencimento: 20, // Valor padrão igual às obrigações acessórias
-        anteciparDiaNaoUtil: false, // Padrão posterga
-      })),
+      obrigacoesAcessorias: [],
+      obrigacoesPrincipais: [] as ObrigacaoPrincipalSelecionada[],
       parcelamentos: [],
     },
   });
+  // Carregar obrigações acessórias do banco de dados
+  useEffect(() => {
+    async function loadObrigacoes() {
+      try {
+        const response = await fetch("/api/obrigacoes-acessorias");
+        if (!response.ok) {
+          throw new Error("Erro ao carregar obrigações");
+        }
+        const data = await response.json();
+        setObrigacoesAcessorias(data);
 
+        // Atualizar valores do formulário com as obrigações reais
+        form.setValue(
+          "obrigacoesAcessorias",
+          data.map((obrigacao: ObrigacaoAcessoria) => ({
+            id: obrigacao.id,
+            nome: obrigacao.nome,
+            selecionada: false,
+            diaVencimento: 20,
+            anteciparDiaNaoUtil: false,
+          }))
+        );
+      } catch (error) {
+        console.error("Erro ao carregar obrigações:", error);
+        toast.error("Erro ao carregar obrigações acessórias");
+      } finally {
+        setLoadingObrigacoes(false);
+      }
+    }
+
+    loadObrigacoes();
+  }, [form]);
+  useEffect(() => {
+    async function loadObrigacoesPrincipais() {
+      try {
+        const response = await fetch("/api/obrigacoes-principais");
+        if (!response.ok) throw new Error("Erro ao carregar");
+        const data: ObrigacaoPrincipal[] = await response.json();
+        setObrigacoesPrincipais(data);
+
+        form.setValue(
+          "obrigacoesPrincipais",
+          data.map((op) => ({
+            id: op.id,
+            nome: op.nome,
+            selecionada: false,
+            diaVencimento: 20,
+            anteciparDiaNaoUtil: false,
+          }))
+        );
+      } catch (error) {
+        toast.error("Erro ao carregar obrigações principais");
+      } finally {
+        setLoadingObrigacoesPrincipais(false);
+      }
+    }
+
+    loadObrigacoesPrincipais();
+  }, [form]);
   async function onSubmit(data: FormValues) {
     setIsSubmitting(true);
     try {
-      console.log('[FRONT] Iniciando submissão do formulário...');
-      
-      console.log('[FRONT] Sessão obtida:', {
+      console.log("[FRONT] Iniciando submissão do formulário...");
+
+      console.log("[FRONT] Sessão obtida:", {
         userId: session?.data?.user?.id,
-        email: session?.data?.user?.email
+        email: session?.data?.user?.email,
       });
 
       // Log dos dados do formulário antes de processar
-      console.log('[FRONT] Dados do formulário (raw):', JSON.parse(JSON.stringify(data)));
-  
+      console.log(
+        "[FRONT] Dados do formulário (raw):",
+        JSON.parse(JSON.stringify(data))
+      );
+
       const empresaData = {
         ...data,
         usuarioId: session?.data?.user?.id,
@@ -214,64 +319,69 @@ export function AdicionarEmpresaForm() {
             diaVencimento: obrigacao.diaVencimento,
             anteciparDiaNaoUtil: obrigacao.anteciparDiaNaoUtil,
           })),
-        
+
         obrigacoesPrincipais: data.obrigacoesPrincipais
           .filter((obrigacao) => obrigacao.selecionada)
           .flatMap((obrigacao) => {
-            if (obrigacao.nome === "ICMS" && obrigacao.temMultiplos && obrigacao.itens) {
-              return obrigacao.itens.map(item => ({
+            // Tratamento especial para ICMS com múltiplos itens
+            if (
+              obrigacao.nome === "ICMS" &&
+              obrigacao.temMultiplos &&
+              obrigacao.itens
+            ) {
+              return obrigacao.itens.map((item) => ({
                 obrigacaoPrincipalId: obrigacao.id,
                 diaVencimento: item.diaVencimento,
                 anteciparDiaNaoUtil: item.anteciparDiaNaoUtil,
-                aliquota: 0,
-                descricao: item.descricao,
-                uf: item.uf
+                aliquota: 0, // Valor padrão
+                descricao: item.descricao || null,
               }));
             }
+
+            // Para outras obrigações ou ICMS sem múltiplos itens
             return {
               obrigacaoPrincipalId: obrigacao.id,
               diaVencimento: obrigacao.diaVencimento || 20,
               anteciparDiaNaoUtil: obrigacao.anteciparDiaNaoUtil || false,
-              aliquota: 0
+              aliquota: 0, // Valor padrão
+              descricao: null,
+              uf: null,
             };
           }),
-        
-        parcelamentos: data.parcelamentos?.map((parcelamento) => ({
-          ambito: parcelamento.ambito,
-          debitoConsolidado: parcelamento.debitoConsolidado,
-          numeroParcelas: parcelamento.numeroParcelas,
-          dataVencimento: parcelamento.dataVencimento,
-          observacoes: parcelamento.observacoes,
-        })),
+
+        parcelamentos:
+          data.parcelamentos?.map((parcelamento) => ({
+            ambito: parcelamento.ambito,
+            debitoConsolidado: parcelamento.debitoConsolidado,
+            numeroParcelas: parcelamento.numeroParcelas,
+            dataVencimento: parcelamento.dataVencimento,
+            observacoes: parcelamento.observacoes || null,
+          })) || [],
       };
-  
-      console.log('[FRONT] Dados preparados para API:', JSON.parse(JSON.stringify(empresaData)));
-  
-      const response = await fetch('/api/empresas', {
-        method: 'POST',
+
+      // Log para debug
+      console.log(
+        "Dados enviados para API:",
+        JSON.stringify(empresaData, null, 2)
+      );
+
+      const response = await fetch("/api/empresas", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(empresaData),
       });
-  
-      console.log('[FRONT] Resposta da API:', {
-        status: response.status,
-        statusText: response.statusText
-      });
-  
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('[FRONT] Erro na resposta da API:', {
-          status: response.status,
-          errorData
-        });
-        throw new Error(errorData.error || 'Erro ao cadastrar empresa');
+        console.error("Erro na resposta:", errorData);
+        throw new Error(errorData.message || "Erro ao cadastrar empresa");
       }
-  
+
       const result = await response.json();
-      console.log('[FRONT] Empresa cadastrada com sucesso:', result);
-      
+      console.log("[FRONT] Empresa cadastrada com sucesso:", result);
+
       toast.success("Empresa cadastrada com sucesso!", {
         action: {
           label: "Visualizar",
@@ -280,25 +390,28 @@ export function AdicionarEmpresaForm() {
           },
         },
       });
-  
+
       form.reset();
       setStep(1);
-  
     } catch (error) {
-      console.error('[FRONT] Erro completo no onSubmit:', {
-        error: error instanceof Error ? error.message : 'Erro desconhecido',
-        stack: error instanceof Error ? error.stack : undefined
+      console.error("[FRONT] Erro completo no onSubmit:", {
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+        stack: error instanceof Error ? error.stack : undefined,
       });
-      toast.error(error instanceof Error ? error.message : "Erro ao cadastrar empresa");
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao cadastrar empresa"
+      );
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  const nextStep = async () => {
+  const nextStep = async (e?: React.FormEvent) => {
     // Valida os campos da etapa atual antes de avançar
     let isValid = true;
-
+    if (e) {
+      e.preventDefault(); // Previne o submit do formulário
+    }
     if (step === 1) {
       isValid = await form.trigger([
         "razaoSocial",
@@ -333,14 +446,6 @@ export function AdicionarEmpresaForm() {
     ]);
   };
 
-  const removeParcelamento = (index: number) => {
-    const current = form.getValues("parcelamentos") || [];
-    form.setValue(
-      "parcelamentos",
-      current.filter((_, i) => i !== index)
-    );
-  };
-
   return (
     <Card className="max-w-3xl mx-auto">
       <CardHeader>
@@ -372,19 +477,6 @@ export function AdicionarEmpresaForm() {
                 />
                 <FormField
                   control={form.control}
-                  name="nomeFantasia"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome Fantasia</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
                   name="cnpj"
                   render={({ field }) => (
                     <FormItem>
@@ -398,53 +490,25 @@ export function AdicionarEmpresaForm() {
                 />
                 <FormField
                   control={form.control}
-                  name="inscricaoEstadual"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Inscrição Estadual</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="telefone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefone</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>E-mail</FormLabel>
+                      <FormLabel>E-mail*</FormLabel>
                       <FormControl>
-                        <Input {...field} type="email" />
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="exemplo@dominio.com"
+                          className={
+                            form.formState.errors.email ? "border-red-500" : ""
+                          }
+                        />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="endereco"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Endereço</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
+                      {form.formState.errors.email && (
+                        <FormMessage className="text-red-500">
+                          {form.formState.errors.email.message}
+                        </FormMessage>
+                      )}
                     </FormItem>
                   )}
                 />
@@ -467,22 +531,23 @@ export function AdicionarEmpresaForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>UF*</FormLabel>
-                      <FormControl>
-                        <Input {...field} maxLength={2} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="cep"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CEP</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a UF" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {estadosBrasileiros.map((estado) => (
+                            <SelectItem key={estado.sigla} value={estado.sigla}>
+                              {estado.sigla} - {estado.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -492,7 +557,7 @@ export function AdicionarEmpresaForm() {
                   name="regimeTributacao"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Regime Tributação*</FormLabel>
+                      <FormLabel>Regime Tributação</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -535,9 +600,7 @@ export function AdicionarEmpresaForm() {
                           <SelectItem value="ANA_CONRADO">
                             Ana Conrado
                           </SelectItem>
-                          <SelectItem value="CLAUDENIR">
-                            Claudenir
-                          </SelectItem>
+                          <SelectItem value="CLAUDENIR">Claudenir</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>
@@ -560,6 +623,7 @@ export function AdicionarEmpresaForm() {
             )}
 
             {/* Etapa 2: Obrigações Acessórias */}
+            {/* Etapa 2: Obrigações Acessórias */}
             {step === 2 && (
               <div className="space-y-6">
                 <h3 className="text-lg font-medium">Obrigações Acessórias</h3>
@@ -567,153 +631,228 @@ export function AdicionarEmpresaForm() {
                   Selecione as obrigações e configure os vencimentos
                 </p>
 
-                <div className="space-y-4">
-                  {obrigacoesAcessorias.map((obrigacao, index) => (
-                    <div key={obrigacao.id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            checked={form.watch(
-                              `obrigacoesAcessorias.${index}.selecionada`
-                            )}
-                            onCheckedChange={(checked) => {
-                              form.setValue(
-                                `obrigacoesAcessorias.${index}.selecionada`,
-                                !!checked
-                              );
-                            }}
-                          />
-                          <div>
-                            <h4 className="font-medium">{obrigacao.nome}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {obrigacao.periodicidade}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                {loadingObrigacoes ? (
+                  <div className="flex justify-center items-center h-40">
+                    <p>Carregando obrigações...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {form
+                      .watch("obrigacoesAcessorias")
+                      ?.map((obrigacao, index) => {
+                        const obrigacaoInfo = obrigacoesAcessorias.find(
+                          (oa) => oa.id === obrigacao.id
+                        );
 
-                      {form.watch(
-                        `obrigacoesAcessorias.${index}.selecionada`
-                      ) && (
-                        <div className="mt-4 space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name={`obrigacoesAcessorias.${index}.diaVencimento`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Dia base do vencimento</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      max="31"
-                                      {...field}
-                                      onChange={(e) =>
-                                        field.onChange(
-                                          parseInt(e.target.value) || 1
-                                        )
-                                      }
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name={`obrigacoesAcessorias.${index}.anteciparDiaNaoUtil`}
-                              render={({ field }) => (
-                                <FormItem className="space-y-3">
-                                  <FormLabel>
-                                    Ajuste para dia não útil
-                                  </FormLabel>
-                                  <FormControl>
-                                    <RadioGroup
-                                      onValueChange={(value) =>
-                                        field.onChange(value === "antecipar")
-                                      }
-                                      value={
-                                        field.value ? "antecipar" : "postergar"
-                                      }
-                                      className="flex flex-col space-y-1"
-                                    >
-                                      <FormItem className="flex items-center space-x-3 space-y-0">
-                                        <FormControl>
-                                          <RadioGroupItem value="antecipar" />
-                                        </FormControl>
-                                        <FormLabel className="font-normal">
-                                          Antecipar para o último dia útil
-                                          anterior
-                                        </FormLabel>
-                                      </FormItem>
-                                      <FormItem className="flex items-center space-x-3 space-y-0">
-                                        <FormControl>
-                                          <RadioGroupItem value="postergar" />
-                                        </FormControl>
-                                        <FormLabel className="font-normal">
-                                          Postergar para o próximo dia útil
-                                        </FormLabel>
-                                      </FormItem>
-                                    </RadioGroup>
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Pré-visualização dos vencimentos */}
-                          <div className="mt-4">
-                            <h4 className="text-sm font-medium mb-2">
-                              Previsão de Vencimentos para o Ano
-                            </h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                              {Array.from({ length: 12 }).map(
-                                (_, monthIndex) => {
-                                  const month = monthIndex + 1;
-                                  const mesCompetencia = monthIndex + 1;
-                                  const anoAtual = new Date().getFullYear();
-                                  const diaBase = form.watch(
-                                    `obrigacoesAcessorias.${index}.diaVencimento`
-                                  );
-                                  const antecipar = form.watch(
-                                    `obrigacoesAcessorias.${index}.anteciparDiaNaoUtil`
-                                  );
-
-                                  const dataVencimento = calcularVencimento(
-                                    mesCompetencia,
-                                    anoAtual,
-                                    diaBase,
-                                    antecipar
-                                  );
-
-                                  return (
-                                    <div key={month} className="text-sm">
-                                      <span className="font-medium">
-                                        {new Date(0, month - 1).toLocaleString(
-                                          "pt-BR",
-                                          {
-                                            month: "short",
-                                          }
-                                        )}
-                                      </span>
-                                      <div>{dataVencimento}</div>
-                                    </div>
-                                  );
-                                }
-                              )}
+                        return (
+                          <div
+                            key={obrigacao.id}
+                            className="border rounded-lg p-4"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <Checkbox
+                                  checked={obrigacao.selecionada}
+                                  onCheckedChange={(checked) => {
+                                    form.setValue(
+                                      `obrigacoesAcessorias.${index}.selecionada`,
+                                      !!checked
+                                    );
+                                  }}
+                                />
+                                <div>
+                                  <h4 className="font-medium">
+                                    {obrigacaoInfo?.nome || obrigacao.nome}
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {obrigacaoInfo?.periodicidade || "Mensal"}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
+
+                            {obrigacao.selecionada && (
+                              <div className="mt-4 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name={`obrigacoesAcessorias.${index}.diaVencimento`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>
+                                          Dia base do vencimento
+                                        </FormLabel>
+                                        <FormControl>
+                                          <Input
+                                            type="number"
+                                            min="1"
+                                            max="31"
+                                            value={field.value}
+                                            onChange={(e) => {
+                                              const value = parseInt(
+                                                e.target.value
+                                              );
+                                              field.onChange(
+                                                isNaN(value)
+                                                  ? 1
+                                                  : Math.min(
+                                                      Math.max(value, 1),
+                                                      31
+                                                    )
+                                              );
+                                            }}
+                                            onBlur={field.onBlur}
+                                            ref={field.ref}
+                                          />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+
+                                  <FormField
+                                    control={form.control}
+                                    name={`obrigacoesAcessorias.${index}.anteciparDiaNaoUtil`}
+                                    render={({ field }) => (
+                                      <FormItem className="space-y-3">
+                                        <FormLabel>
+                                          Ajuste para dia não útil
+                                        </FormLabel>
+                                        <FormControl>
+                                          <RadioGroup
+                                            onValueChange={(value) =>
+                                              field.onChange(
+                                                value === "antecipar"
+                                              )
+                                            }
+                                            value={
+                                              field.value
+                                                ? "antecipar"
+                                                : "postergar"
+                                            }
+                                            className="flex flex-col space-y-1"
+                                          >
+                                            <FormItem className="flex items-center space-x-3 space-y-0">
+                                              <FormControl>
+                                                <RadioGroupItem value="antecipar" />
+                                              </FormControl>
+                                              <FormLabel className="font-normal">
+                                                Antecipar para o último dia útil
+                                                anterior
+                                              </FormLabel>
+                                            </FormItem>
+                                            <FormItem className="flex items-center space-x-3 space-y-0">
+                                              <FormControl>
+                                                <RadioGroupItem value="postergar" />
+                                              </FormControl>
+                                              <FormLabel className="font-normal">
+                                                Postergar para o próximo dia
+                                                útil
+                                              </FormLabel>
+                                            </FormItem>
+                                          </RadioGroup>
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+
+                                {/* Pré-visualização dos vencimentos */}
+                                <div className="mt-4">
+                                  <h4 className="text-sm font-medium mb-2">
+                                    Previsão de Vencimentos para o Ano
+                                  </h4>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    {Array.from({ length: 12 }).map(
+                                      (_, monthIndex) => {
+                                        const month = monthIndex + 1;
+                                        const mesCompetencia = monthIndex + 1;
+                                        const anoAtual =
+                                          new Date().getFullYear();
+                                        const diaBase = form.watch(
+                                          `obrigacoesAcessorias.${index}.diaVencimento`
+                                        );
+                                        const antecipar = form.watch(
+                                          `obrigacoesAcessorias.${index}.anteciparDiaNaoUtil`
+                                        );
+
+                                        const dataVencimento =
+                                          calcularVencimento(
+                                            mesCompetencia,
+                                            anoAtual,
+                                            diaBase,
+                                            antecipar
+                                          );
+
+                                        return (
+                                          <div key={month} className="text-sm">
+                                            <span className="font-medium">
+                                              {new Date(
+                                                0,
+                                                month - 1
+                                              ).toLocaleString("pt-BR", {
+                                                month: "short",
+                                              })}
+                                            </span>
+                                            <div>{dataVencimento}</div>
+                                          </div>
+                                        );
+                                      }
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                        );
+                      })}
+                  </div>
+                )}
+
+                {/* Botão para recarregar obrigações em caso de erro */}
+                {!loadingObrigacoes && obrigacoesAcessorias.length === 0 && (
+                  <div className="flex flex-col items-center gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      Não foi possível carregar as obrigações
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        setLoadingObrigacoes(true);
+                        try {
+                          const response = await fetch(
+                            "/api/obrigacoes-acessorias"
+                          );
+                          if (!response.ok) throw new Error("Erro ao carregar");
+                          const data = await response.json();
+                          setObrigacoesAcessorias(data);
+                          form.setValue(
+                            "obrigacoesAcessorias",
+                            data.map((oa: any) => ({
+                              id: oa.id,
+                              nome: oa.nome,
+                              selecionada: false,
+                              diaVencimento: 20,
+                              anteciparDiaNaoUtil: false,
+                            }))
+                          );
+                        } catch (error) {
+                          toast.error("Erro ao recarregar obrigações");
+                        } finally {
+                          setLoadingObrigacoes(false);
+                        }
+                      }}
+                    >
+                      Tentar novamente
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
+            {/* Etapa 3: Obrigações Principais */}
             {/* Etapa 3: Obrigações Principais */}
             {step === 3 && (
               <div className="space-y-6">
@@ -722,164 +861,325 @@ export function AdicionarEmpresaForm() {
                   Selecione as obrigações e configure os vencimentos
                 </p>
 
-                <div className="space-y-4">
-                  {obrigacoesPrincipais.map((obrigacao, index) => (
-                    <div key={obrigacao.id} className="border rounded-lg p-4">
-                      {/* Cabeçalho com checkbox */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            checked={form.watch(
-                              `obrigacoesPrincipais.${index}.selecionada`
-                            )}
-                            onCheckedChange={(checked) => {
-                              form.setValue(
-                                `obrigacoesPrincipais.${index}.selecionada`,
-                                !!checked
-                              );
-                            }}
-                          />
-                          <div>
-                            <h4 className="font-medium">{obrigacao.nome}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {obrigacao.descricao}
-                            </p>
-                          </div>
-                        </div>
+                {loadingObrigacoesPrincipais ? (
+                  <div className="flex justify-center items-center h-40">
+                    <p>Carregando obrigações...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {form
+                      .watch("obrigacoesPrincipais")
+                      ?.map((obrigacao, index) => {
+                        const obrigacaoInfo = obrigacoesPrincipais.find(
+                          (op) => op.id === obrigacao.id
+                        );
 
-                        {/* Botão para múltiplos ICMS */}
-                        {obrigacao.nome === "ICMS" && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const current = form.getValues(
-                                `obrigacoesPrincipais.${index}`
-                              );
-                              const newValue = !current.temMultiplos;
-                              form.setValue(
-                                `obrigacoesPrincipais.${index}.temMultiplos`,
-                                newValue
-                              );
-
-                              if (newValue && !current.itens) {
-                                form.setValue(
-                                  `obrigacoesPrincipais.${index}.itens`,
-                                  [
-                                    {
-                                      diaVencimento:
-                                        current.diaVencimento || 20,
-                                      anteciparDiaNaoUtil:
-                                        current.anteciparDiaNaoUtil || false,
-                                      descricao: "ICMS Principal",
-                                      uf: "",
-                                    },
-                                  ]
-                                );
-                              }
-                            }}
+                        return (
+                          <div
+                            key={obrigacao.id}
+                            className="border rounded-lg p-4"
                           >
-                            {form.watch(
-                              `obrigacoesPrincipais.${index}.temMultiplos`
-                            )
-                              ? "Remover múltiplos"
-                              : "Tem mais de um ICMS"}
-                          </Button>
-                        )}
-                      </div>
-
-                      {form.watch(
-                        `obrigacoesPrincipais.${index}.selecionada`
-                      ) && (
-                        <div className="mt-4 space-y-4">
-                          {/* Modo múltiplos ICMS */}
-                          {obrigacao.nome === "ICMS" &&
-                          form.watch(
-                            `obrigacoesPrincipais.${index}.temMultiplos`
-                          ) ? (
-                            <div className="space-y-4">
-                              <div className="flex justify-between items-center">
-                                <h4 className="font-medium">Itens de ICMS</h4>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    const currentItems =
-                                      form.getValues(
-                                        `obrigacoesPrincipais.${index}.itens`
-                                      ) || [];
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <Checkbox
+                                  checked={obrigacao.selecionada}
+                                  onCheckedChange={(checked) => {
                                     form.setValue(
-                                      `obrigacoesPrincipais.${index}.itens`,
-                                      [
-                                        ...currentItems,
-                                        {
-                                          diaVencimento: 20,
-                                          anteciparDiaNaoUtil: false,
-                                          descricao: "",
-                                          uf: "",
-                                        },
-                                      ]
+                                      `obrigacoesPrincipais.${index}.selecionada`,
+                                      !!checked
                                     );
                                   }}
-                                >
-                                  Adicionar ICMS
-                                </Button>
+                                />
+                                <div>
+                                  <h4 className="font-medium">
+                                    {obrigacaoInfo?.nome || obrigacao.nome}
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {obrigacaoInfo?.descricao ||
+                                      "Obrigação principal"}
+                                  </p>
+                                </div>
                               </div>
 
-                              {form
-                                .watch(`obrigacoesPrincipais.${index}.itens`)
-                                ?.map((item, itemIndex) => (
-                                  <div
-                                    key={itemIndex}
-                                    className="border p-4 rounded-lg space-y-4"
-                                  >
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      <FormField
-                                        control={form.control}
-                                        name={`obrigacoesPrincipais.${index}.itens.${itemIndex}.descricao`}
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Descrição*</FormLabel>
-                                            <FormControl>
-                                              <Input
-                                                {...field}
-                                                placeholder="Ex: ICMS Normal, ICMS ST"
-                                              />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={form.control}
-                                        name={`obrigacoesPrincipais.${index}.itens.${itemIndex}.uf`}
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>UF (opcional)</FormLabel>
-                                            <FormControl>
-                                              <Input
-                                                {...field}
-                                                placeholder="Ex: SP, RJ"
-                                                maxLength={2}
-                                                onChange={(e) =>
-                                                  field.onChange(
-                                                    e.target.value.toUpperCase()
-                                                  )
-                                                }
-                                              />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
+                              {obrigacaoInfo?.nome === "ICMS" && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const current = form.getValues(
+                                      `obrigacoesPrincipais.${index}`
+                                    );
+                                    const newValue = !current.temMultiplos;
+                                    form.setValue(
+                                      `obrigacoesPrincipais.${index}.temMultiplos`,
+                                      newValue
+                                    );
+
+                                    if (newValue && !current.itens) {
+                                      form.setValue(
+                                        `obrigacoesPrincipais.${index}.itens`,
+                                        [
+                                          {
+                                            diaVencimento:
+                                              current.diaVencimento || 20,
+                                            anteciparDiaNaoUtil:
+                                              current.anteciparDiaNaoUtil ||
+                                              false,
+                                            descricao: "ICMS Principal",
+                                            uf: "",
+                                          },
+                                        ]
+                                      );
+                                    }
+                                  }}
+                                >
+                                  {obrigacao.temMultiplos
+                                    ? "Remover múltiplos"
+                                    : "Tem mais de um ICMS"}
+                                </Button>
+                              )}
+                            </div>
+
+                            {obrigacao.selecionada && (
+                              <div className="mt-4 space-y-4">
+                                {/* Modo múltiplos ICMS */}
+                                {obrigacaoInfo?.nome === "ICMS" &&
+                                obrigacao.temMultiplos ? (
+                                  <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                      <h4 className="font-medium">
+                                        Itens de ICMS
+                                      </h4>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          const currentItems =
+                                            form.getValues(
+                                              `obrigacoesPrincipais.${index}.itens`
+                                            ) || [];
+                                          form.setValue(
+                                            `obrigacoesPrincipais.${index}.itens`,
+                                            [
+                                              ...currentItems,
+                                              {
+                                                diaVencimento: 20,
+                                                anteciparDiaNaoUtil: false,
+                                                descricao: "",
+                                                uf: "",
+                                              },
+                                            ]
+                                          );
+                                        }}
+                                      >
+                                        Adicionar ICMS
+                                      </Button>
                                     </div>
 
+                                    {obrigacao.itens?.map((item, itemIndex) => (
+                                      <div
+                                        key={itemIndex}
+                                        className="border p-4 rounded-lg space-y-4"
+                                      >
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <FormField
+                                            control={form.control}
+                                            name={`obrigacoesPrincipais.${index}.itens.${itemIndex}.descricao`}
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>
+                                                  Descrição*
+                                                </FormLabel>
+                                                <FormControl>
+                                                  <Input
+                                                    {...field}
+                                                    placeholder="Ex: ICMS Normal, ICMS ST"
+                                                  />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <FormField
+                                            control={form.control}
+                                            name={`obrigacoesPrincipais.${index}.itens.${itemIndex}.diaVencimento`}
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>
+                                                  Dia base do vencimento
+                                                </FormLabel>
+                                                <FormControl>
+                                                  <Input
+                                                    type="number"
+                                                    min="1"
+                                                    max="31"
+                                                    value={field.value}
+                                                    onChange={(e) => {
+                                                      const value = parseInt(
+                                                        e.target.value
+                                                      );
+                                                      field.onChange(
+                                                        isNaN(value)
+                                                          ? 1
+                                                          : Math.min(
+                                                              Math.max(
+                                                                value,
+                                                                1
+                                                              ),
+                                                              31
+                                                            )
+                                                      );
+                                                    }}
+                                                  />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+
+                                          <FormField
+                                            control={form.control}
+                                            name={`obrigacoesPrincipais.${index}.itens.${itemIndex}.anteciparDiaNaoUtil`}
+                                            render={({ field }) => (
+                                              <FormItem className="space-y-3">
+                                                <FormLabel>
+                                                  Ajuste para dia não útil
+                                                </FormLabel>
+                                                <FormControl>
+                                                  <RadioGroup
+                                                    onValueChange={(value) =>
+                                                      field.onChange(
+                                                        value === "antecipar"
+                                                      )
+                                                    }
+                                                    value={
+                                                      field.value
+                                                        ? "antecipar"
+                                                        : "postergar"
+                                                    }
+                                                    className="flex flex-col space-y-1"
+                                                  >
+                                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                                      <FormControl>
+                                                        <RadioGroupItem value="antecipar" />
+                                                      </FormControl>
+                                                      <FormLabel className="font-normal">
+                                                        Antecipar para o último
+                                                        dia útil anterior
+                                                      </FormLabel>
+                                                    </FormItem>
+                                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                                      <FormControl>
+                                                        <RadioGroupItem value="postergar" />
+                                                      </FormControl>
+                                                      <FormLabel className="font-normal">
+                                                        Postergar para o próximo
+                                                        dia útil
+                                                      </FormLabel>
+                                                    </FormItem>
+                                                  </RadioGroup>
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </div>
+
+                                        {/* Pré-visualização dos vencimentos */}
+                                        <div className="mt-4">
+                                          <h4 className="text-sm font-medium mb-2">
+                                            Previsão de Vencimentos
+                                            (Competência/Vencimento)
+                                          </h4>
+                                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                            {Array.from({ length: 12 }).map(
+                                              (_, monthIndex) => {
+                                                const mesCompetencia =
+                                                  monthIndex + 1;
+                                                const anoAtual =
+                                                  new Date().getFullYear();
+                                                const diaBase =
+                                                  form.watch(
+                                                    `obrigacoesPrincipais.${index}.itens.${itemIndex}.diaVencimento`
+                                                  ) || 20;
+                                                const antecipar =
+                                                  form.watch(
+                                                    `obrigacoesPrincipais.${index}.itens.${itemIndex}.anteciparDiaNaoUtil`
+                                                  ) || false;
+
+                                                const dataVencimento =
+                                                  calcularVencimento(
+                                                    mesCompetencia,
+                                                    anoAtual,
+                                                    diaBase,
+                                                    antecipar
+                                                  );
+
+                                                return (
+                                                  <div
+                                                    key={monthIndex}
+                                                    className="text-sm"
+                                                  >
+                                                    <span className="font-medium">
+                                                      {new Date(
+                                                        0,
+                                                        monthIndex
+                                                      ).toLocaleString(
+                                                        "pt-BR",
+                                                        {
+                                                          month: "short",
+                                                        }
+                                                      )}
+                                                    </span>
+                                                    <div className="text-green-600 font-medium">
+                                                      {dataVencimento || "N/A"}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              }
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        <Button
+                                          type="button"
+                                          variant="destructive"
+                                          size="sm"
+                                          onClick={() => {
+                                            const currentItems =
+                                              form.getValues(
+                                                `obrigacoesPrincipais.${index}.itens`
+                                              ) || [];
+                                            if (currentItems.length > 1) {
+                                              form.setValue(
+                                                `obrigacoesPrincipais.${index}.itens`,
+                                                currentItems.filter(
+                                                  (_, i) => i !== itemIndex
+                                                )
+                                              );
+                                            } else {
+                                              toast.warning(
+                                                "É necessário ter pelo menos um item de ICMS"
+                                              );
+                                            }
+                                          }}
+                                        >
+                                          Remover ICMS
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  /* Modo único (para ICMS ou outras obrigações) */
+                                  <div className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       <FormField
                                         control={form.control}
-                                        name={`obrigacoesPrincipais.${index}.itens.${itemIndex}.diaVencimento`}
+                                        name={`obrigacoesPrincipais.${index}.diaVencimento`}
                                         render={({ field }) => (
                                           <FormItem>
                                             <FormLabel>
@@ -890,23 +1190,29 @@ export function AdicionarEmpresaForm() {
                                                 type="number"
                                                 min="1"
                                                 max="31"
-                                                {...field}
-                                                onChange={(e) =>
+                                                value={field.value}
+                                                onChange={(e) => {
+                                                  const value = parseInt(
+                                                    e.target.value
+                                                  );
                                                   field.onChange(
-                                                    parseInt(e.target.value) ||
-                                                      1
-                                                  )
-                                                }
+                                                    isNaN(value)
+                                                      ? 20
+                                                      : Math.min(
+                                                          Math.max(value, 1),
+                                                          31
+                                                        )
+                                                  );
+                                                }}
                                               />
                                             </FormControl>
                                             <FormMessage />
                                           </FormItem>
                                         )}
                                       />
-
                                       <FormField
                                         control={form.control}
-                                        name={`obrigacoesPrincipais.${index}.itens.${itemIndex}.anteciparDiaNaoUtil`}
+                                        name={`obrigacoesPrincipais.${index}.anteciparDiaNaoUtil`}
                                         render={({ field }) => (
                                           <FormItem className="space-y-3">
                                             <FormLabel>
@@ -951,8 +1257,6 @@ export function AdicionarEmpresaForm() {
                                         )}
                                       />
                                     </div>
-
-                                    {/* Pré-visualização dos vencimentos */}
                                     <div className="mt-4">
                                       <h4 className="text-sm font-medium mb-2">
                                         Previsão de Vencimentos
@@ -967,11 +1271,11 @@ export function AdicionarEmpresaForm() {
                                               new Date().getFullYear();
                                             const diaBase =
                                               form.watch(
-                                                `obrigacoesPrincipais.${index}.itens.${itemIndex}.diaVencimento`
+                                                `obrigacoesPrincipais.${index}.diaVencimento`
                                               ) || 20;
                                             const antecipar =
                                               form.watch(
-                                                `obrigacoesPrincipais.${index}.itens.${itemIndex}.anteciparDiaNaoUtil`
+                                                `obrigacoesPrincipais.${index}.anteciparDiaNaoUtil`
                                               ) || false;
 
                                             const dataVencimento =
@@ -984,20 +1288,19 @@ export function AdicionarEmpresaForm() {
 
                                             return (
                                               <div
-                                                key={mesCompetencia}
+                                                key={monthIndex}
                                                 className="text-sm"
                                               >
                                                 <span className="font-medium">
                                                   {new Date(
                                                     0,
-                                                    mesCompetencia - 1
+                                                    monthIndex
                                                   ).toLocaleString("pt-BR", {
                                                     month: "short",
                                                   })}
-                                                  /{anoAtual}
                                                 </span>
-                                                <div>
-                                                  Vence: {dataVencimento}
+                                                <div className="text-green-600 font-medium">
+                                                  {dataVencimento || "N/A"}
                                                 </div>
                                               </div>
                                             );
@@ -1005,171 +1308,62 @@ export function AdicionarEmpresaForm() {
                                         )}
                                       </div>
                                     </div>
-
-                                    <Button
-                                      type="button"
-                                      variant="destructive"
-                                      size="sm"
-                                      onClick={() => {
-                                        const currentItems =
-                                          form.getValues(
-                                            `obrigacoesPrincipais.${index}.itens`
-                                          ) || [];
-                                        if (currentItems.length > 1) {
-                                          form.setValue(
-                                            `obrigacoesPrincipais.${index}.itens`,
-                                            currentItems.filter(
-                                              (_, i) => i !== itemIndex
-                                            )
-                                          );
-                                        } else {
-                                          toast.warning(
-                                            "É necessário ter pelo menos um item de ICMS"
-                                          );
-                                        }
-                                      }}
-                                    >
-                                      Remover ICMS
-                                    </Button>
                                   </div>
-                                ))}
-                            </div>
-                          ) : (
-                            /* Modo único (para ICMS ou outras obrigações) */
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                  control={form.control}
-                                  name={`obrigacoesPrincipais.${index}.diaVencimento`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>
-                                        Dia base do vencimento
-                                      </FormLabel>
-                                      <FormControl>
-                                        <Input
-                                          type="number"
-                                          min="1"
-                                          max="31"
-                                          {...field}
-                                          onChange={(e) =>
-                                            field.onChange(
-                                              parseInt(e.target.value) || 1
-                                            )
-                                          }
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={form.control}
-                                  name={`obrigacoesPrincipais.${index}.anteciparDiaNaoUtil`}
-                                  render={({ field }) => (
-                                    <FormItem className="space-y-3">
-                                      <FormLabel>
-                                        Ajuste para dia não útil
-                                      </FormLabel>
-                                      <FormControl>
-                                        <RadioGroup
-                                          onValueChange={(value) =>
-                                            field.onChange(
-                                              value === "antecipar"
-                                            )
-                                          }
-                                          value={
-                                            field.value
-                                              ? "antecipar"
-                                              : "postergar"
-                                          }
-                                          className="flex flex-col space-y-1"
-                                        >
-                                          <FormItem className="flex items-center space-x-3 space-y-0">
-                                            <FormControl>
-                                              <RadioGroupItem value="antecipar" />
-                                            </FormControl>
-                                            <FormLabel className="font-normal">
-                                              Antecipar para o último dia útil
-                                              anterior
-                                            </FormLabel>
-                                          </FormItem>
-                                          <FormItem className="flex items-center space-x-3 space-y-0">
-                                            <FormControl>
-                                              <RadioGroupItem value="postergar" />
-                                            </FormControl>
-                                            <FormLabel className="font-normal">
-                                              Postergar para o próximo dia útil
-                                            </FormLabel>
-                                          </FormItem>
-                                        </RadioGroup>
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
+                                )}
                               </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
 
-                              {/* Pré-visualização dos vencimentos */}
-                              <div className="mt-4">
-                                <h4 className="text-sm font-medium mb-2">
-                                  Previsão de Vencimentos
-                                  (Competência/Vencimento)
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                  {Array.from({ length: 12 }).map(
-                                    (_, monthIndex) => {
-                                      const mesCompetencia = monthIndex + 1;
-                                      const anoAtual = new Date().getFullYear();
-                                      const diaBase =
-                                        form.watch(
-                                          `obrigacoesPrincipais.${index}.diaVencimento`
-                                        ) || 20;
-                                      const antecipar =
-                                        form.watch(
-                                          `obrigacoesPrincipais.${index}.anteciparDiaNaoUtil`
-                                        ) || false;
-
-                                      const dataVencimento = calcularVencimento(
-                                        mesCompetencia,
-                                        anoAtual,
-                                        diaBase,
-                                        antecipar
-                                      );
-
-                                      return (
-                                        <div
-                                          key={mesCompetencia}
-                                          className="text-sm"
-                                        >
-                                          <span className="font-medium">
-                                            {new Date(
-                                              0,
-                                              mesCompetencia - 1
-                                            ).toLocaleString("pt-BR", {
-                                              month: "short",
-                                            })}
-                                            /{anoAtual}
-                                          </span>
-                                          <div>Vence: {dataVencimento}</div>
-                                        </div>
-                                      );
-                                    }
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                {/* Botão para recarregar obrigações em caso de erro */}
+                {!loadingObrigacoesPrincipais &&
+                  obrigacoesPrincipais.length === 0 && (
+                    <div className="flex flex-col items-center gap-2">
+                      <p className="text-sm text-muted-foreground">
+                        Não foi possível carregar as obrigações principais
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          setLoadingObrigacoesPrincipais(true);
+                          try {
+                            const response = await fetch(
+                              "/api/obrigacoes-principais"
+                            );
+                            if (!response.ok)
+                              throw new Error("Erro ao carregar");
+                            const data = await response.json();
+                            setObrigacoesPrincipais(data);
+                            form.setValue(
+                              "obrigacoesPrincipais",
+                              data.map((op: any) => ({
+                                id: op.id,
+                                nome: op.nome,
+                                selecionada: false,
+                                diaVencimento: 20,
+                                anteciparDiaNaoUtil: false,
+                              }))
+                            );
+                          } catch (error) {
+                            toast.error(
+                              "Erro ao recarregar obrigações principais"
+                            );
+                          } finally {
+                            setLoadingObrigacoesPrincipais(false);
+                          }
+                        }}
+                      >
+                        Tentar novamente
+                      </Button>
                     </div>
-                  ))}
-                </div>
+                  )}
               </div>
             )}
 
-            {/* Etapa 4: Parcelamentos */}
             {/* Etapa 4: Parcelamentos */}
             {step === 4 && (
               <div className="space-y-6">
