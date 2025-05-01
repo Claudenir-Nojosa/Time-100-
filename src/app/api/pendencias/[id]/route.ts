@@ -4,7 +4,7 @@ import { auth } from '../../../../../auth';
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  
 ) {
 
   const session = await auth()
@@ -16,7 +16,7 @@ export async function PUT(
     const { concluida } = await request.json();
     
     const pendencia = await db.pendencia.update({
-      where: { id: params.id, usuarioId: session.user.id },
+      where: { id: (await params).id, usuarioId: session.user.id },
       data: { concluida },
     });
     
@@ -31,9 +31,9 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  
 ) {
-  
+
   const session = await auth()
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -41,7 +41,7 @@ export async function DELETE(
 
   try {
     await db.pendencia.delete({
-      where: { id: params.id, usuarioId: session.user.id },
+      where: { id: (await params).id, usuarioId: session.user.id },
     });
     
     return NextResponse.json({ success: true });

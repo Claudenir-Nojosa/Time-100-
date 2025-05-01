@@ -3,7 +3,7 @@ import db from "@/lib/db";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  
 ) {
   try {
     const { searchParams } = new URL(request.url);
@@ -23,7 +23,7 @@ export async function GET(
     // 1. Busca todas as empresas que tem essa obrigação
     const empresasComObrigacao = await db.empresaObrigacaoAcessoria.findMany({
       where: {
-        obrigacaoAcessoriaId: params.id,
+        obrigacaoAcessoriaId: (await params).id,
       },
       include: {
         empresa: {
@@ -77,7 +77,7 @@ export async function GET(
     );
 
     return NextResponse.json({
-      obrigacaoAcessoriaId: params.id,
+      obrigacaoAcessoriaId: (await params).id,
       mes: mesNum,
       ano: anoNum,
       totalEmpresas,
