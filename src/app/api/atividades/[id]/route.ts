@@ -23,13 +23,13 @@ export async function DELETE(
 }
 
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } } 
+  request: Request,  // Pode ser `Request` ou `NextRequest`
+  { params }: { params: Promise<{ id: string }> }  // Parâmetro como Promise
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;  // Resolve a Promise
     const { nome, horario, responsavel, data, concluida } = await request.json();
-    
+
     const atividade = await db.atividade.update({
       where: { id },
       data: {
