@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -64,14 +64,13 @@ const empresaSchema = z.object({
 });
 
 interface PageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 type EmpresaFormValues = z.infer<typeof empresaSchema>;
 
 export default function EditarEmpresaPage({ params }: PageProps) {
+  const resolvedParams = use(params); // Resolve a Promise no client-side
   const router = useRouter();
   const [obrigacoesAcessorias, setObrigacoesAcessorias] = useState<
     ObrigacaoAcessoria[]
@@ -98,7 +97,7 @@ export default function EditarEmpresaPage({ params }: PageProps) {
           await Promise.all([
             fetch("/api/obrigacoes-acessorias"),
             fetch("/api/obrigacoes-principais"),
-            fetch(`/api/empresas/${params.id}`),
+            fetch(`/api/empresas/${resolvedParams.id}`),
           ]);
 
         const [
@@ -146,11 +145,11 @@ export default function EditarEmpresaPage({ params }: PageProps) {
     }
 
     loadData();
-  }, [params.id, form]);
+  }, [resolvedParams.id, form]); 
 
   const onSubmit: SubmitHandler<EmpresaFormValues> = async (data) => {
     try {
-      const response = await fetch(`/api/empresas/${params.id}`, {
+      const response = await fetch(`/api/empresas/${resolvedParams.id}`,{
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -163,7 +162,7 @@ export default function EditarEmpresaPage({ params }: PageProps) {
       }
 
       toast("Empresa atualizada com sucesso");
-      router.push(`/dashboard/empresas/${params.id}`);
+      router.push(`/dashboard/empresas/${resolvedParams.id}`);
     } catch (error) {
       console.error("Erro ao atualizar empresa:", error);
       toast("Não foi possível atualizar a empresa");
