@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 
+interface ObrigacaoAcessoria {
+  id: string;
+  empresaId: string;
+  obrigacaoAcessoriaId: string;
+  diaVencimento: number;
+  anteciparDiaNaoUtil: boolean;
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -37,7 +45,10 @@ export async function GET(
     });
 
     if (!empresa) {
-      return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Empresa não encontrada" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(empresa);
@@ -100,12 +111,15 @@ export async function PUT(
     );
 
     // Remove obrigações acessórias não enviadas
-    const obrigacoesAcessoriasAtuais = await db.empresaObrigacaoAcessoria.findMany({
-      where: { empresaId: resolvedParams.id }, // Usando o resolvedParams
-    });
+    const obrigacoesAcessoriasAtuais =
+      await db.empresaObrigacaoAcessoria.findMany({
+        where: { empresaId: resolvedParams.id }, // Usando o resolvedParams
+      });
 
+    // E depois atualize a parte do código com o erro:
     const obrigacoesAcessoriasParaRemover = obrigacoesAcessoriasAtuais.filter(
-      (oa) => !body.obrigacoesAcessorias.some((o: any) => o.id === oa.id)
+      (oa: ObrigacaoAcessoria) =>
+        !body.obrigacoesAcessorias.some((o: any) => o.id === oa.id)
     );
 
     await Promise.all(
@@ -147,9 +161,10 @@ export async function PUT(
     );
 
     // Remove obrigações principais não enviadas
-    const obrigacoesPrincipaisAtuais = await db.empresaObrigacaoPrincipal.findMany({
-      where: { empresaId: resolvedParams.id }, // Usando o resolvedParams
-    });
+    const obrigacoesPrincipaisAtuais =
+      await db.empresaObrigacaoPrincipal.findMany({
+        where: { empresaId: resolvedParams.id }, // Usando o resolvedParams
+      });
 
     const obrigacoesPrincipaisParaRemover = obrigacoesPrincipaisAtuais.filter(
       (op) => !body.obrigacoesPrincipais.some((o: any) => o.id === op.id)
@@ -163,9 +178,9 @@ export async function PUT(
 
     return NextResponse.json(empresa);
   } catch (error) {
-    console.error('Erro ao atualizar empresa:', error);
+    console.error("Erro ao atualizar empresa:", error);
     return NextResponse.json(
-      { error: 'Erro ao atualizar empresa' },
+      { error: "Erro ao atualizar empresa" },
       { status: 500 }
     );
   }
