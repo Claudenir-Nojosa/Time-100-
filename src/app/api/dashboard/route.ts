@@ -33,8 +33,8 @@ export async function GET() {
     const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     const chartData = meses.map((mes, index) => ({
       name: mes,
-      principais: Math.round(principais.find(p => p.mes === index + 1)?.percentual || 0),
-      acessorias: Math.round(acessorias.find(a => a.mes === index + 1)?.percentual || 0)
+      principais: Math.round(principais.find((p: MesData) => p.mes === index + 1)?.percentual || 0),
+      acessorias: Math.round(acessorias.find((a: MesData) => a.mes === index + 1)?.percentual || 0)
     }));
 
     // Estatísticas adicionais
