@@ -175,10 +175,9 @@ export async function PUT(
         where: { empresaId: resolvedParams.id }, // Usando o resolvedParams
       });
 
-    const obrigacoesPrincipaisParaRemover = obrigacoesPrincipaisAtuais.filter(
-      (op) => !body.obrigacoesPrincipais.some((o: any) => o.id === op.id)
-    );
-
+      const obrigacoesPrincipaisParaRemover = obrigacoesPrincipaisAtuais.filter(
+        (op: ObrigacaoPrincipal) => !body.obrigacoesPrincipais.some((o: any) => o.id === op.id)
+      );
     await Promise.all(
       obrigacoesPrincipaisParaRemover.map((op: ObrigacaoPrincipal) =>
         db.empresaObrigacaoPrincipal.delete({ where: { id: op.id } })
