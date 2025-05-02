@@ -9,6 +9,17 @@ interface ObrigacaoAcessoria {
   anteciparDiaNaoUtil: boolean;
 }
 
+interface ObrigacaoPrincipal {
+  id: string;
+  empresaId: string;
+  obrigacaoPrincipalId: string;
+  diaVencimento: number;
+  anteciparDiaNaoUtil: boolean;
+  aliquota?: number | null;  // Adicione | null
+  descricao?: string | null; // Adicione | null
+  uf?: string | null;        // Adicione | null
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -123,7 +134,7 @@ export async function PUT(
     );
 
     await Promise.all(
-      obrigacoesAcessoriasParaRemover.map((oa) =>
+      obrigacoesAcessoriasParaRemover.map((oa: ObrigacaoAcessoria) =>
         db.empresaObrigacaoAcessoria.delete({ where: { id: oa.id } })
       )
     );
@@ -132,7 +143,6 @@ export async function PUT(
     await Promise.all(
       body.obrigacoesPrincipais.map(async (op: any) => {
         if (op.id) {
-          // Atualiza existente
           return db.empresaObrigacaoPrincipal.update({
             where: { id: op.id },
             data: {
@@ -144,10 +154,9 @@ export async function PUT(
             },
           });
         } else {
-          // Cria nova
           return db.empresaObrigacaoPrincipal.create({
             data: {
-              empresaId: resolvedParams.id, // Usando o resolvedParams
+              empresaId: resolvedParams.id,
               obrigacaoPrincipalId: op.obrigacaoPrincipalId,
               diaVencimento: op.diaVencimento,
               anteciparDiaNaoUtil: op.anteciparDiaNaoUtil,
@@ -171,7 +180,7 @@ export async function PUT(
     );
 
     await Promise.all(
-      obrigacoesPrincipaisParaRemover.map((op) =>
+      obrigacoesPrincipaisParaRemover.map((op: ObrigacaoPrincipal) =>
         db.empresaObrigacaoPrincipal.delete({ where: { id: op.id } })
       )
     );
