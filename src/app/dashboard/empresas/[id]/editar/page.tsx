@@ -24,8 +24,43 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ObrigacaoAcessoria, ObrigacaoPrincipal } from "@prisma/client";
 import { toast } from "sonner";
+
+interface ObrigacaoAcessoria {
+  id: string;
+  nome: string;
+  descricao?: string | null;
+  periodicidade: string;
+}
+
+interface ObrigacaoPrincipal {
+  id: string;
+  nome: string;
+  descricao?: string | null;
+}
+
+interface EmpresaObrigacaoAcessoria {
+  id: string;
+  empresaId: string;
+  obrigacaoAcessoriaId: string;
+  diaVencimento: number;
+  anteciparDiaNaoUtil: boolean;
+  observacoes?: string | null;
+  obrigacaoAcessoria: ObrigacaoAcessoria;
+}
+
+interface EmpresaObrigacaoPrincipal {
+  id: string;
+  empresaId: string;
+  obrigacaoPrincipalId: string;
+  diaVencimento: number;
+  anteciparDiaNaoUtil: boolean;
+  aliquota: number;
+  descricao?: string | null;
+  uf?: string | null;
+  observacoes?: string | null;
+  obrigacaoPrincipal: ObrigacaoPrincipal;
+}
 
 // Schema de validação
 const empresaSchema = z.object({
@@ -117,7 +152,7 @@ export default function EditarEmpresaPage({ params }: PageProps) {
         form.reset({
           ...empresaData,
           obrigacoesAcessorias: empresaData.obrigacoesAcessorias.map(
-            (oa: any) => ({
+            (oa: EmpresaObrigacaoAcessoria) => ({
               id: oa.id,
               obrigacaoAcessoriaId: oa.obrigacaoAcessoria.id,
               diaVencimento: oa.diaVencimento,
@@ -125,7 +160,7 @@ export default function EditarEmpresaPage({ params }: PageProps) {
             })
           ),
           obrigacoesPrincipais: empresaData.obrigacoesPrincipais.map(
-            (op: any) => ({
+            (op: EmpresaObrigacaoPrincipal) => ({
               id: op.id,
               obrigacaoPrincipalId: op.obrigacaoPrincipal.id,
               diaVencimento: op.diaVencimento,
@@ -145,11 +180,11 @@ export default function EditarEmpresaPage({ params }: PageProps) {
     }
 
     loadData();
-  }, [resolvedParams.id, form]); 
+  }, [resolvedParams.id, form]);
 
   const onSubmit: SubmitHandler<EmpresaFormValues> = async (data) => {
     try {
-      const response = await fetch(`/api/empresas/${resolvedParams.id}`,{
+      const response = await fetch(`/api/empresas/${resolvedParams.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -371,11 +406,13 @@ export default function EditarEmpresaPage({ params }: PageProps) {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {obrigacoesAcessorias.map((oa) => (
-                              <SelectItem key={oa.id} value={oa.id}>
-                                {oa.nome}
-                              </SelectItem>
-                            ))}
+                            {obrigacoesAcessorias.map(
+                              (oa: ObrigacaoAcessoria) => (
+                                <SelectItem key={oa.id} value={oa.id}>
+                                  {oa.nome}
+                                </SelectItem>
+                              )
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -494,11 +531,13 @@ export default function EditarEmpresaPage({ params }: PageProps) {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {obrigacoesPrincipais.map((op) => (
-                              <SelectItem key={op.id} value={op.id}>
-                                {op.nome}
-                              </SelectItem>
-                            ))}
+                            {obrigacoesPrincipais.map(
+                              (op: ObrigacaoPrincipal) => (
+                                <SelectItem key={op.id} value={op.id}>
+                                  {op.nome}
+                                </SelectItem>
+                              )
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
