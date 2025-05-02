@@ -22,12 +22,20 @@ export async function generateStaticParams() {
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function ObrigacaoPage(props: PageProps) {
-  // Acesse os params de forma assíncrona
-  const { slug } = await props.params;
+export default async function ObrigacaoPage({
+  params,
+  searchParams,
+}: PageProps) {
+  // Resolve ambas as Promises em paralelo
+  const [resolvedParams, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams,
+  ]);
+
+  const { slug } = resolvedParams;
 
   const obrigacaoNome = Object.entries(obrigacoesDisponiveis).find(
     ([key]) => key === slug
