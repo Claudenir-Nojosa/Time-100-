@@ -4,10 +4,15 @@ import { EmpresaDetalhes } from "@/components/shared/empresa-detalhes";
 export default async function EmpresaPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const response = await fetch(`http://localhost:3000/api/empresas/${params.id}`);
-  
+  // Resolve a Promise dos parâmetros
+  const resolvedParams = await params;
+
+  const response = await fetch(
+    `http://localhost:3000/api/empresas/${resolvedParams.id}`
+  );
+
   if (!response.ok) {
     return notFound();
   }
