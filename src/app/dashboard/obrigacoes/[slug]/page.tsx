@@ -12,60 +12,26 @@ const obrigacoesDisponiveis = {
   "gia-rs": "GIA RS",
   mit: "MIT",
   "efd-reinf": "EFD Reinf",
-  "dapi": "DAPI",
-  "declan": "DECLAN",
+  "simples-nacional": "Simples Nacional",
+  dapi: "DAPI",
+  declan: "DECLAN",
 } as const;
 
 type ObrigacaoSlug = keyof typeof obrigacoesDisponiveis;
 
-interface EmpresaComObrigacao {
-  id: string;
-  razaoSocial: string;
-  cnpj: string;
-  inscricaoEstadual?: string | null;
-  email?: string | null;
-  cidade?: string | null;
-  uf: string;
-  regimeTributacao: "SIMPLES_NACIONAL" | "LUCRO_PRESUMIDO" | "LUCRO_REAL";
-  responsavel: string;
-  observacoes?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  usuarioId: string;
-  empresaObrigacaoAcessoria: {
-    id: string;
-    empresaId: string;
-    obrigacaoAcessoriaId: string;
-    diaVencimento: number;
-    anteciparDiaNaoUtil: boolean;
-    observacoes?: string | null;
-    entregas: Array<{
-      id: string;
-      mes: number;
-      ano: number;
-      entregue: boolean;
-      dataEntrega?: Date | null;
-      observacoes?: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-    }>;
-  };
-}
-
-// Corrected PageProps interface
-interface PageProps {
-  params: { slug: ObrigacaoSlug };
-  searchParams: { [key: string]: string | string[] | undefined };
-}
-
 export async function generateStaticParams() {
   return Object.keys(obrigacoesDisponiveis).map((slug) => ({
-    slug,
+    slug: slug as ObrigacaoSlug,
   }));
 }
 
-export default async function ObrigacaoPage({ params }: PageProps) {
-  const { slug } = params;
+export default async function ObrigacaoPage({
+  params,
+}: {
+  params: Promise<{ slug: ObrigacaoSlug }>;
+}) {
+  // Aguarda a resolução dos params
+  const { slug } = await params;
   const obrigacaoNome = obrigacoesDisponiveis[slug];
 
   if (!obrigacaoNome) return notFound();
