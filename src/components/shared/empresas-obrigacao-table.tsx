@@ -108,7 +108,7 @@ export function EmpresasObrigacaoTable({
       });
 
       if (!response.ok) throw new Error("Erro ao atualizar entrega");
-
+ // teste
       window.location.reload();
     } catch (error) {
       console.error("Erro:", error);
