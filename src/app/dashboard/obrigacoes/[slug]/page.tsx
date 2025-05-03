@@ -12,7 +12,8 @@ const obrigacoesDisponiveis = {
   "gia-rs": "GIA RS",
   mit: "MIT",
   "efd-reinf": "EFD Reinf",
-  "simples-nacional": "Simples Nacional",
+  "dapi": "DAPI",
+  "declan": "DECLAN",
 } as const;
 
 type ObrigacaoSlug = keyof typeof obrigacoesDisponiveis;

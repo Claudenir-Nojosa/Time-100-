@@ -5,3 +5,15 @@ export type EmpresaComObrigacaos = Empresa & {
     entregas: EntregaObrigacaoAcessoria[];
   };
 };
+
+export type ObrigacaoSlug = 
+  | "efd-icms-ipi" 
+  | "destda" 
+  | "efd-contribuicoes" 
+  | "gia" 
+  | "dime" 
+  | "gia-rs" 
+  | "mit" 
+  | "efd-reinf" 
+  | "dapi"
+    "declan";

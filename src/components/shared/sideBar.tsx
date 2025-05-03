@@ -232,7 +232,8 @@ export default function Sidebar() {
                   "GIA RS",
                   "MIT",
                   "EFD Reinf",
-                  "Simples Nacional",
+                  "DAPI",
+                  "DECLAN"
                 ].map((item) => (
                   <li key={item}>
                     <Link
