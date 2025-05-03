@@ -1,7 +1,35 @@
 import { EmpresasObrigacaoTable } from "@/components/shared/empresas-obrigacao-table";
 import db from "@/lib/db";
-import { Empresa, EntregaObrigacaoAcessoria } from "@prisma/client";
 import { notFound } from "next/navigation";
+
+
+interface Empresa {
+  id: string;
+  razaoSocial: string;
+  cnpj: string;
+  inscricaoEstadual: string | null;
+  email: string | null;
+  cidade: string | null;
+  uf: string;
+  regimeTributacao: 'SIMPLES_NACIONAL' | 'LUCRO_PRESUMIDO' | 'LUCRO_REAL';
+  responsavel: string;
+  observacoes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  usuarioId: string;
+}
+
+interface EntregaObrigacaoAcessoria {
+  id: string;
+  empresaObrigacaoId: string;
+  mes: number;
+  ano: number;
+  entregue: boolean;
+  dataEntrega: Date | null;
+  observacoes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 interface EmpresaObrigacaoComRelacionamentos {
   id: string;
@@ -13,6 +41,7 @@ interface EmpresaObrigacaoComRelacionamentos {
   empresa: Empresa;
   entregas: EntregaObrigacaoAcessoria[];
 }
+
 
 const obrigacoesDisponiveis = {
   "efd-icms-ipi": "EFD ICMS IPI",
