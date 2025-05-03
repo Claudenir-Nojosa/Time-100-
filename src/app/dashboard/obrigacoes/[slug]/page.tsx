@@ -1,8 +1,6 @@
 import { EmpresasObrigacaoTable } from "@/components/shared/empresas-obrigacao-table";
 import db from "@/lib/db";
 import { notFound } from "next/navigation";
-import { EmpresaComObrigacaos } from "../../../../../types";
-import { EmpresaObrigacaoAcessoria } from "@prisma/client";
 
 const obrigacoesDisponiveis = {
   "efd-icms-ipi": "EFD ICMS IPI",
@@ -13,25 +11,36 @@ const obrigacoesDisponiveis = {
   "gia-rs": "GIA RS",
   mit: "MIT",
   "efd-reinf": "EFD Reinf",
-  dapi: "DAPI",
-  declan: "DECLAN",
-} as const;
-
-type ObrigacaoSlug = keyof typeof obrigacoesDisponiveis;
+  "declan": "DECLAN",
+  "dapi": "DAPI",
+};
 
 export async function generateStaticParams() {
   return Object.keys(obrigacoesDisponiveis).map((slug) => ({
-    slug: slug as ObrigacaoSlug,
+    slug,
   }));
+}
+
+interface PageProps {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export default async function ObrigacaoPage({
   params,
-}: {
-  params: { slug: ObrigacaoSlug };
-}) {
-  const { slug } = params;
-  const obrigacaoNome = obrigacoesDisponiveis[slug];
+  searchParams,
+}: PageProps) {
+  // Resolve ambas as Promises em paralelo
+  const [resolvedParams, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams,
+  ]);
+
+  const { slug } = resolvedParams;
+
+  const obrigacaoNome = Object.entries(obrigacoesDisponiveis).find(
+    ([key]) => key === slug
+  )?.[1];
 
   if (!obrigacaoNome) return notFound();
 
@@ -49,43 +58,19 @@ export default async function ObrigacaoPage({
 
   if (!obrigacao) return notFound();
 
-  const empresas: EmpresaComObrigacaos[] = obrigacao.empresas.map((eo) => {
-    const empresaObrigacao = {
+  // Transforma os dados para o formato esperado pelo componente
+  const empresas = obrigacao.empresas.map((eo) => ({
+    ...eo.empresa,
+    empresaObrigacaoAcessoria: {
       id: eo.id,
       empresaId: eo.empresaId,
       obrigacaoAcessoriaId: eo.obrigacaoAcessoriaId,
       diaVencimento: eo.diaVencimento,
       anteciparDiaNaoUtil: eo.anteciparDiaNaoUtil,
-      observacoes: eo.observacoes || null,
-      entregas: eo.entregas.map(entrega => ({
-        id: entrega.id,
-        mes: entrega.mes,
-        ano: entrega.ano,
-        entregue: entrega.entregue,
-        dataEntrega: entrega.dataEntrega || null,
-        observacoes: entrega.observacoes || null,
-        createdAt: entrega.createdAt,
-        updatedAt: entrega.updatedAt,
-      })),
-    };
-
-    return {
-      id: eo.empresa.id,
-      razaoSocial: eo.empresa.razaoSocial,
-      cnpj: eo.empresa.cnpj,
-      inscricaoEstadual: eo.empresa.inscricaoEstadual || null,
-      email: eo.empresa.email || null,
-      cidade: eo.empresa.cidade || null,
-      uf: eo.empresa.uf,
-      regimeTributacao: eo.empresa.regimeTributacao,
-      responsavel: eo.empresa.responsavel,
-      observacoes: eo.empresa.observacoes || null,
-      createdAt: eo.empresa.createdAt,
-      updatedAt: eo.empresa.updatedAt,
-      usuarioId: eo.empresa.usuarioId,
-      empresaObrigacaoAcessoria: empresaObrigacao,
-    };
-  });
+      observacoes: eo.observacoes,
+      entregas: eo.entregas,
+    },
+  }));
 
   return (
     <div className="space-y-4 mt-20">
