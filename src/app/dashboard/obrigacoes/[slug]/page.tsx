@@ -1,6 +1,18 @@
 import { EmpresasObrigacaoTable } from "@/components/shared/empresas-obrigacao-table";
 import db from "@/lib/db";
+import { Empresa, EntregaObrigacaoAcessoria } from "@prisma/client";
 import { notFound } from "next/navigation";
+
+interface EmpresaObrigacaoComRelacionamentos {
+  id: string;
+  empresaId: string;
+  obrigacaoAcessoriaId: string;
+  diaVencimento: number;
+  anteciparDiaNaoUtil: boolean;
+  observacoes: string | null;
+  empresa: Empresa;
+  entregas: EntregaObrigacaoAcessoria[];
+}
 
 const obrigacoesDisponiveis = {
   "efd-icms-ipi": "EFD ICMS IPI",
@@ -11,8 +23,8 @@ const obrigacoesDisponiveis = {
   "gia-rs": "GIA RS",
   mit: "MIT",
   "efd-reinf": "EFD Reinf",
-  "declan": "DECLAN",
-  "dapi": "DAPI",
+  declan: "DECLAN",
+  dapi: "DAPI",
 };
 
 export async function generateStaticParams() {
@@ -59,18 +71,20 @@ export default async function ObrigacaoPage({
   if (!obrigacao) return notFound();
 
   // Transforma os dados para o formato esperado pelo componente
-  const empresas = obrigacao.empresas.map((eo) => ({
-    ...eo.empresa,
-    empresaObrigacaoAcessoria: {
-      id: eo.id,
-      empresaId: eo.empresaId,
-      obrigacaoAcessoriaId: eo.obrigacaoAcessoriaId,
-      diaVencimento: eo.diaVencimento,
-      anteciparDiaNaoUtil: eo.anteciparDiaNaoUtil,
-      observacoes: eo.observacoes,
-      entregas: eo.entregas,
-    },
-  }));
+  const empresas = obrigacao.empresas.map(
+    (eo: EmpresaObrigacaoComRelacionamentos) => ({
+      ...eo.empresa,
+      empresaObrigacaoAcessoria: {
+        id: eo.id,
+        empresaId: eo.empresaId,
+        obrigacaoAcessoriaId: eo.obrigacaoAcessoriaId,
+        diaVencimento: eo.diaVencimento,
+        anteciparDiaNaoUtil: eo.anteciparDiaNaoUtil,
+        observacoes: eo.observacoes,
+        entregas: eo.entregas,
+      },
+    })
+  );
 
   return (
     <div className="space-y-4 mt-20">
