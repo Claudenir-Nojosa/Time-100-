@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import type { EmpresaComObrigacaos } from "../../../types";
 import { Check, X } from "lucide-react";
 import { formatCNPJ, formatRegime } from "@/lib/utils";
 import {
@@ -25,7 +26,7 @@ interface EmpresaComObrigacao extends Empresa {
 }
 
 interface EmpresasObrigacaoTableProps {
-  empresas: EmpresaComObrigacao[];
+  empresas: EmpresaComObrigacaos[];
   obrigacaoNome: string;
 }
 

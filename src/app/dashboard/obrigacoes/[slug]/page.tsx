@@ -1,6 +1,7 @@
 import { EmpresasObrigacaoTable } from "@/components/shared/empresas-obrigacao-table";
 import db from "@/lib/db";
 import { notFound } from "next/navigation";
+import { EmpresaComObrigacaos } from "../../../../../types";
 
 const obrigacoesDisponiveis = {
   "efd-icms-ipi": "EFD ICMS IPI",
@@ -12,34 +13,58 @@ const obrigacoesDisponiveis = {
   mit: "MIT",
   "efd-reinf": "EFD Reinf",
   "simples-nacional": "Simples Nacional",
-};
+} as const;
+
+type ObrigacaoSlug = keyof typeof obrigacoesDisponiveis;
+
+// Define the complete type that matches EmpresaComObrigacao
+interface EmpresaComObrigacao {
+  id: string;
+  razaoSocial: string;
+  cnpj: string;
+  inscricaoEstadual?: string | null;
+  email?: string | null;
+  cidade?: string | null;
+  uf: string;
+  regimeTributacao: 'SIMPLES_NACIONAL' | 'LUCRO_PRESUMIDO' | 'LUCRO_REAL';
+  responsavel: string;
+  observacoes?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  usuarioId: string;
+  empresaObrigacaoAcessoria: {
+    id: string;
+    empresaId: string;
+    obrigacaoAcessoriaId: string;
+    diaVencimento: number;
+    anteciparDiaNaoUtil: boolean;
+    observacoes?: string | null;
+    entregas: Array<{
+      id: string;
+      mes: number;
+      ano: number;
+      entregue: boolean;
+      dataEntrega?: Date | null;
+      observacoes?: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    }>;
+  };
+}
+
+interface PageProps {
+  params: { slug: ObrigacaoSlug };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
 
 export async function generateStaticParams() {
   return Object.keys(obrigacoesDisponiveis).map((slug) => ({
     slug,
   }));
 }
-
-interface PageProps {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}
-
-export default async function ObrigacaoPage({
-  params,
-  searchParams,
-}: PageProps) {
-  // Resolve ambas as Promises em paralelo
-  const [resolvedParams, resolvedSearchParams] = await Promise.all([
-    params,
-    searchParams,
-  ]);
-
-  const { slug } = resolvedParams;
-
-  const obrigacaoNome = Object.entries(obrigacoesDisponiveis).find(
-    ([key]) => key === slug
-  )?.[1];
+export default async function ObrigacaoPage({ params }: PageProps) {
+  const { slug } = params;
+  const obrigacaoNome = obrigacoesDisponiveis[slug];
 
   if (!obrigacaoNome) return notFound();
 
@@ -57,16 +82,10 @@ export default async function ObrigacaoPage({
 
   if (!obrigacao) return notFound();
 
-  // Transforma os dados para o formato esperado pelo componente
-  const empresas = obrigacao.empresas.map((eo) => ({
+  const empresas: EmpresaComObrigacaos[] = obrigacao.empresas.map((eo) => ({
     ...eo.empresa,
     empresaObrigacaoAcessoria: {
-      id: eo.id,
-      empresaId: eo.empresaId,
-      obrigacaoAcessoriaId: eo.obrigacaoAcessoriaId,
-      diaVencimento: eo.diaVencimento,
-      anteciparDiaNaoUtil: eo.anteciparDiaNaoUtil,
-      observacoes: eo.observacoes,
+      ...eo,
       entregas: eo.entregas,
     },
   }));
