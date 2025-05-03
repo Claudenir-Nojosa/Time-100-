@@ -17,7 +17,6 @@ const obrigacoesDisponiveis = {
 
 type ObrigacaoSlug = keyof typeof obrigacoesDisponiveis;
 
-// Define the complete type that matches EmpresaComObrigacao
 interface EmpresaComObrigacao {
   id: string;
   razaoSocial: string;
@@ -26,7 +25,7 @@ interface EmpresaComObrigacao {
   email?: string | null;
   cidade?: string | null;
   uf: string;
-  regimeTributacao: 'SIMPLES_NACIONAL' | 'LUCRO_PRESUMIDO' | 'LUCRO_REAL';
+  regimeTributacao: "SIMPLES_NACIONAL" | "LUCRO_PRESUMIDO" | "LUCRO_REAL";
   responsavel: string;
   observacoes?: string | null;
   createdAt: Date;
@@ -52,6 +51,7 @@ interface EmpresaComObrigacao {
   };
 }
 
+// Corrected PageProps interface
 interface PageProps {
   params: { slug: ObrigacaoSlug };
   searchParams: { [key: string]: string | string[] | undefined };
@@ -62,6 +62,7 @@ export async function generateStaticParams() {
     slug,
   }));
 }
+
 export default async function ObrigacaoPage({ params }: PageProps) {
   const { slug } = params;
   const obrigacaoNome = obrigacoesDisponiveis[slug];
