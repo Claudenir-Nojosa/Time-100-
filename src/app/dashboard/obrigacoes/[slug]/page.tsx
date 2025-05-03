@@ -2,6 +2,7 @@ import { EmpresasObrigacaoTable } from "@/components/shared/empresas-obrigacao-t
 import db from "@/lib/db";
 import { notFound } from "next/navigation";
 import { EmpresaComObrigacaos } from "../../../../../types";
+import { EmpresaObrigacaoAcessoria } from "@prisma/client";
 
 const obrigacoesDisponiveis = {
   "efd-icms-ipi": "EFD ICMS IPI",
@@ -12,7 +13,6 @@ const obrigacoesDisponiveis = {
   "gia-rs": "GIA RS",
   mit: "MIT",
   "efd-reinf": "EFD Reinf",
-  "simples-nacional": "Simples Nacional",
   dapi: "DAPI",
   declan: "DECLAN",
 } as const;
@@ -28,10 +28,9 @@ export async function generateStaticParams() {
 export default async function ObrigacaoPage({
   params,
 }: {
-  params: Promise<{ slug: ObrigacaoSlug }>;
+  params: { slug: ObrigacaoSlug };
 }) {
-  // Aguarda a resolução dos params
-  const { slug } = await params;
+  const { slug } = params;
   const obrigacaoNome = obrigacoesDisponiveis[slug];
 
   if (!obrigacaoNome) return notFound();
@@ -50,13 +49,43 @@ export default async function ObrigacaoPage({
 
   if (!obrigacao) return notFound();
 
-  const empresas: EmpresaComObrigacaos[] = obrigacao.empresas.map((eo) => ({
-    ...eo.empresa,
-    empresaObrigacaoAcessoria: {
-      ...eo,
-      entregas: eo.entregas,
-    },
-  }));
+  const empresas: EmpresaComObrigacaos[] = obrigacao.empresas.map((eo) => {
+    const empresaObrigacao = {
+      id: eo.id,
+      empresaId: eo.empresaId,
+      obrigacaoAcessoriaId: eo.obrigacaoAcessoriaId,
+      diaVencimento: eo.diaVencimento,
+      anteciparDiaNaoUtil: eo.anteciparDiaNaoUtil,
+      observacoes: eo.observacoes || null,
+      entregas: eo.entregas.map(entrega => ({
+        id: entrega.id,
+        mes: entrega.mes,
+        ano: entrega.ano,
+        entregue: entrega.entregue,
+        dataEntrega: entrega.dataEntrega || null,
+        observacoes: entrega.observacoes || null,
+        createdAt: entrega.createdAt,
+        updatedAt: entrega.updatedAt,
+      })),
+    };
+
+    return {
+      id: eo.empresa.id,
+      razaoSocial: eo.empresa.razaoSocial,
+      cnpj: eo.empresa.cnpj,
+      inscricaoEstadual: eo.empresa.inscricaoEstadual || null,
+      email: eo.empresa.email || null,
+      cidade: eo.empresa.cidade || null,
+      uf: eo.empresa.uf,
+      regimeTributacao: eo.empresa.regimeTributacao,
+      responsavel: eo.empresa.responsavel,
+      observacoes: eo.empresa.observacoes || null,
+      createdAt: eo.empresa.createdAt,
+      updatedAt: eo.empresa.updatedAt,
+      usuarioId: eo.empresa.usuarioId,
+      empresaObrigacaoAcessoria: empresaObrigacao,
+    };
+  });
 
   return (
     <div className="space-y-4 mt-20">
