@@ -1,12 +1,24 @@
 // next.config.js
-const nextConfig = {
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
   images: {
-    domains: ["lh3.googleusercontent.com"], // Permite imagens do Google
+    domains: ["lh3.googleusercontent.com"],
   },
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
     ignoreDuringBuilds: true,
+  },
+  webpack: (config, { isServer }) => {
+    config.externals = [...config.externals, { '@prisma/client': '@prisma/client' }];
+    
+    // Adicione esta parte se estiver usando server actions
+    if (isServer) {
+      config.externals.push({
+        '@prisma/client': '@prisma/client',
+      });
+    }
+    
+    return config;
   },
 };
 
