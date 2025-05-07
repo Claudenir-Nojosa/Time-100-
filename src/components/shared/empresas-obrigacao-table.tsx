@@ -12,17 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
 import { formatCNPJ, formatRegime } from "@/lib/utils";
-import {
-  Empresa,
-  EmpresaObrigacaoAcessoria,
-  EntregaObrigacaoAcessoria,
-} from "@prisma/client";
 
-interface EmpresaComObrigacao extends Empresa {
-  empresaObrigacaoAcessoria: EmpresaObrigacaoAcessoria & {
-    entregas: EntregaObrigacaoAcessoria[];
-  };
-}
+import { EmpresaComObrigacao } from "../../../types/types";
+
 
 interface EmpresasObrigacaoTableProps {
   empresas: EmpresaComObrigacao[];

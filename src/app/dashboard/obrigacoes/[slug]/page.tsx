@@ -1,7 +1,7 @@
 import { EmpresasObrigacaoTable } from "@/components/shared/empresas-obrigacao-table";
 import db from "@/lib/db";
 import { notFound } from "next/navigation";
-
+import { EmpresaComObrigacao } from "../../../../../types/types";
 
 interface Empresa {
   id: string;
