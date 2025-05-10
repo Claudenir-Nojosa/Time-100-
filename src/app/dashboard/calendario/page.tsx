@@ -35,6 +35,9 @@ export default function CalendarioPage() {
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
+  const [draggedAtividade, setDraggedAtividade] = useState<Atividade | null>(
+    null
+  );
   const [atividadeParaExcluir, setAtividadeParaExcluir] = useState<
     string | null
   >(null);
@@ -60,7 +63,12 @@ export default function CalendarioPage() {
         setIsLoading(true);
         const res = await fetch("/api/atividades");
         const data = await res.json();
-        setAtividades(data);
+        setAtividades(
+          data.map((a: any) => ({
+            ...a,
+            data: new Date(a.data), // Conversão explícita para Date
+          }))
+        );
       } catch (error) {
         console.error("Erro ao buscar atividades:", error);
       } finally {
@@ -81,6 +89,94 @@ export default function CalendarioPage() {
   if (!session.data) {
     return null;
   }
+
+  // Funções de drag and drop
+  const handleDragStart = (e: React.DragEvent, atividade: Atividade) => {
+    e.dataTransfer.setData("text/plain", atividade.id);
+    setDraggedAtividade(atividade);
+    e.currentTarget.classList.add("opacity-50");
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove("opacity-50");
+  };
+
+  const handleDragOver = (e: React.DragEvent, date: Date) => {
+    e.preventDefault();
+    e.currentTarget.classList.add("bg-purple-100", "dark:bg-purple-900/20");
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove("bg-purple-100", "dark:bg-purple-900/20");
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove("bg-purple-100", "dark:bg-purple-900/20");
+
+    if (!draggedAtividade) return;
+
+    // Garante que a data da atividade seja um objeto Date
+    const draggedDate = new Date(draggedAtividade.data);
+
+    // Verifica se a data é diferente
+    if (
+      draggedDate.getDate() === targetDate.getDate() &&
+      draggedDate.getMonth() === targetDate.getMonth() &&
+      draggedDate.getFullYear() === targetDate.getFullYear()
+    ) {
+      return;
+    }
+
+    try {
+      // Atualiza no banco de dados
+      const updatedAtividade = await updateAtividadeDate(
+        draggedAtividade.id,
+        targetDate
+      );
+
+      // Atualiza no estado local
+      setAtividades(
+        atividades.map((a) =>
+          a.id === draggedAtividade.id
+            ? {
+                ...updatedAtividade,
+                data: new Date(updatedAtividade.data), // Garante que a data atualizada também seja Date
+              }
+            : a
+        )
+      );
+
+      toast.success(
+        `Atividade movida para ${targetDate.toLocaleDateString("pt-BR")}`
+      );
+    } catch (error) {
+      toast.error("Erro ao mover atividade");
+      console.error("Erro ao mover atividade:", error);
+    }
+  };
+
+  const updateAtividadeDate = async (id: string, newDate: Date) => {
+    const response = await fetch(`/api/atividades/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        data: newDate.toISOString(),
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Falha ao atualizar atividade");
+    }
+
+    const result = await response.json();
+    return {
+      ...result,
+      data: new Date(result.data), // Conversão explícita
+    };
+  };
 
   const handleToggleConcluida = async (atividade: Atividade) => {
     try {
@@ -288,7 +384,7 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`empty-${i}`}
-          className={`h-32 p-2 border dark:border-purple-900/40 ${
+          className={`min-h-40 p-2 border dark:border-purple-900/40 ${
             isWeekend(dayIndex)
               ? "dark:bg-gray-900 bg-purple-50/30"
               : "dark:bg-gray-950 bg-white"
@@ -311,17 +407,20 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`day-${i}`}
-          className={`h-32 p-2 border dark:border-purple-900/40 transition-all
-          ${
-            isToday
-              ? "dark:bg-purple-900/30 bg-purple-100 border-purple-300 dark:border-purple-600"
-              : ""
-          }
-          ${
-            isWeekend(dayIndex)
-              ? "dark:bg-gray-900 bg-purple-50/30"
-              : "dark:bg-gray-950 bg-white"
-          }`}
+          className={`min-h-40 p-2 border dark:border-purple-900/40 transition-all flex flex-col
+            ${
+              isToday
+                ? "dark:bg-purple-900/30 bg-purple-100 border-purple-300 dark:border-purple-600"
+                : ""
+            }
+            ${
+              isWeekend(dayIndex)
+                ? "dark:bg-gray-900 bg-purple-50/30"
+                : "dark:bg-gray-950 bg-white"
+            }`}
+          onDragOver={(e) => handleDragOver(e, currentDay)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, currentDay)}
         >
           <div className="flex justify-between items-start">
             <span
@@ -340,18 +439,23 @@ export default function CalendarioPage() {
               <Plus className="h-4 w-4" />
             </button>
           </div>
-          <div className="mt-1 space-y-1 overflow-y-auto max-h-20">
+          <div className="mt-1 flex-1 space-y-1 overflow-y-auto">
             {atividadesDoDia.map((atividade) => (
               <div
                 key={atividade.id}
-                className={`text-xs p-1 rounded cursor-pointer relative group
-      ${atividade.concluida ? "bg-green-100 text-green-800 line-through" : "bg-blue-100 text-blue-800"}`}
+                className={`text-xs p-1.5 rounded cursor-pointer relative group
+                  ${atividade.concluida ? "bg-green-100 text-green-800 line-through" : "bg-blue-100 text-blue-800"}
+                  hover:shadow-sm transition-shadow`}
                 onClick={() => handleToggleConcluida(atividade)}
+                draggable
+                onDragStart={(e) => handleDragStart(e, atividade)}
+                onDragEnd={handleDragEnd}
               >
-                <div className="flex justify-between items-center gap-2">
+                {/* Conteúdo da atividade (mesmo que antes) */}
+                <div className="flex justify-between items-start gap-2">
                   {/* Avatar + Informações da atividade */}
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Avatar className="h-5 w-5 flex-shrink-0">
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                    <Avatar className="h-5 w-5 flex-shrink-0 mt-0.5">
                       <AvatarImage
                         src={atividade.responsavelImg || ""}
                         alt={atividade.responsavel}
@@ -367,18 +471,20 @@ export default function CalendarioPage() {
                       </AvatarFallback>
                     </Avatar>
 
-                    <div className="flex items-baseline gap-1 min-w-0">
+                    <div className="flex flex-col min-w-0">
                       {atividade.horario && (
                         <span className="font-medium text-xs whitespace-nowrap">
                           {atividade.horario}
                         </span>
                       )}
-                      <span className="truncate text-xs">{atividade.nome}</span>
+                      <span className="text-xs break-words whitespace-normal">
+                        {atividade.nome}
+                      </span>
                     </div>
                   </div>
 
                   {/* Botões de ação (aparecem no hover) */}
-                  <div className="flex">
+                  <div className="flex flex-shrink-0">
                     <button
                       className="text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded-full p-0.5 ml-1"
                       onClick={(e) => {
@@ -418,11 +524,14 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`next-${i}`}
-          className={`h-32 p-2 border dark:border-purple-900/40 ${
+          className={`min-h-40 p-2 border dark:border-purple-900/40 ${
             isWeekend(dayIndex)
               ? "dark:bg-gray-900 bg-purple-50/30"
               : "dark:bg-gray-950 bg-white"
           } text-gray-400 dark:text-purple-500/70`}
+          onDragOver={(e) => handleDragOver(e, nextDate)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, nextDate)}
         >
           <div className="flex justify-between items-start">
             <span>{i}</span>
