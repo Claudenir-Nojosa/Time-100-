@@ -3,7 +3,7 @@ import db from '@/lib/db';
 import { auth } from '../../../../auth';
 
 export async function GET() {
- const session = await auth()
+  const session = await auth()
 
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -11,8 +11,17 @@ export async function GET() {
 
   try {
     const pendencias = await db.pendencia.findMany({
-      where: { usuarioId: session.user.id },
+      // Remova o where clause que filtra por usuarioId
       orderBy: { criadoEm: 'desc' },
+      include: {  // Adicione isto para incluir informações do usuário
+        usuario: {
+          select: {
+            name: true,
+            email: true,
+            image: true
+          }
+        }
+      }
     });
     return NextResponse.json(pendencias);
   } catch (error) {
@@ -24,7 +33,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
- const session = await auth()
+  const session = await auth()
 
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -37,8 +46,17 @@ export async function POST(request: Request) {
       data: {
         titulo,
         descricao,
-        usuarioId: session.user.id,
+        usuarioId: session.user.id, // Mantém o usuário que criou
       },
+      include: {  // Adicione isto para incluir informações do usuário
+        usuario: {
+          select: {
+            name: true,
+            email: true,
+            image: true
+          }
+        }
+      }
     });
     
     return NextResponse.json(pendencia);

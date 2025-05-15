@@ -19,12 +19,21 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
+type Usuario = {
+  id: string;
+  name: string;
+  email: string;
+  image: string | null;
+};
+
 type Pendencia = {
   id: string;
   titulo: string;
   descricao: string | null;
   concluida: boolean;
   criadoEm: string;
+  usuario: Usuario;
+  usuarioId: string;
 };
 
 export default function PendenciasPage() {
@@ -285,6 +294,20 @@ export default function PendenciasPage() {
                               {pendencia.descricao}
                             </p>
                           )}
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
+                            <span>Criado por:</span>
+                            {pendencia.usuario.image && (
+                              <img
+                                src={pendencia.usuario.image}
+                                alt="User"
+                                className="h-4 w-4 rounded-full"
+                              />
+                            )}
+                            <span>
+                              {pendencia.usuario.name ||
+                                pendencia.usuario.email}
+                            </span>
+                          </div>
                           <p className="text-xs text-gray-400">
                             Criado em: {formatDate(pendencia.criadoEm)}
                           </p>

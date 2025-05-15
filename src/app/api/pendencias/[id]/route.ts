@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { auth } from '../../../../../auth';
 
+// app/api/pendencias/[id]/route.ts
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }  
+  { params }: { params: { id: string } }  
 ) {
-
   const session = await auth()
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -16,8 +16,17 @@ export async function PUT(
     const { concluida } = await request.json();
     
     const pendencia = await db.pendencia.update({
-      where: { id: (await params).id, usuarioId: session.user.id },
+      where: { id: params.id },
       data: { concluida },
+      include: {
+        usuario: {
+          select: {
+            name: true,
+            email: true,
+            image: true
+          }
+        }
+      }
     });
     
     return NextResponse.json(pendencia);
@@ -31,17 +40,30 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }  
+  { params }: { params: { id: string } }  
 ) {
-
   const session = await auth()
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
   try {
+    // Verifique se o usuário é o criador ou tem permissões de admin
+    const pendencia = await db.pendencia.findUnique({
+      where: { id: params.id }
+    });
+
+    if (!pendencia) {
+      return NextResponse.json({ error: 'Pendência não encontrada' }, { status: 404 });
+    }
+
+    // Permitir deletar apenas se for o criador ou admin
+    if (pendencia.usuarioId !== session.user.id /* && !session.user.isAdmin */) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
+    }
+
     await db.pendencia.delete({
-      where: { id: (await params).id, usuarioId: session.user.id },
+      where: { id: params.id },
     });
     
     return NextResponse.json({ success: true });
