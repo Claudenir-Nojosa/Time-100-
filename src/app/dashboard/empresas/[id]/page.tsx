@@ -4,24 +4,22 @@ import { EmpresaDetalhes } from "@/components/shared/empresa-detalhes";
 export default async function EmpresaPage({
   params,
 }: {
-  params: { id: string } | Promise<{ id: string }>; // Aceita ambos
+  params: Promise<{ id: string }>;
 }) {
   try {
-    // Resolve os params caso seja Promise
-    const resolvedParams = params instanceof Promise ? await params : params;
-    
-    const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://time-100.vercel.app'
+    // Cria a URL correta para a API
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000';
     
-    const apiUrl = `${baseUrl}/api/empresas/${resolvedParams.id}`;
+    const apiUrl = `${baseUrl}/api/empresas/${(await params).id}`;
     
     const response = await fetch(apiUrl, {
-      cache: 'no-store'
+      // Adiciona cache para melhor performance
+      next: { revalidate: 60 } // Revalida a cada 60 segundos
     });
 
     if (!response.ok) {
-      console.error('Erro na API:', await response.text());
       return notFound();
     }
 
@@ -33,7 +31,7 @@ export default async function EmpresaPage({
       </div>
     );
   } catch (error) {
-    console.error("Erro ao carregar empresa:", error);
+    console.error("Error loading empresa:", error);
     return notFound();
   }
 }
