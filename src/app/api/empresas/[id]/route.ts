@@ -15,19 +15,18 @@ interface ObrigacaoPrincipal {
   obrigacaoPrincipalId: string;
   diaVencimento: number;
   anteciparDiaNaoUtil: boolean;
-  aliquota?: number | null;  // Adicione | null
+  aliquota?: number | null; // Adicione | null
   descricao?: string | null; // Adicione | null
-  uf?: string | null;        // Adicione | null
+  uf?: string | null; // Adicione | null
 }
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } } // Tipo correto para App Router
+  { params }: { params: { id: string } } // Correção: Removido o Promise
 ) {
   try {
-    // Se você precisa trabalhar com Promise, resolva aqui
-    const empresaId = params.id; // Já está resolvido pelo Next.js
-    
+    const empresaId = params.id;
+
     const empresa = await db.empresa.findUnique({
       where: { id: empresaId },
       include: {
@@ -73,18 +72,17 @@ export async function GET(
   }
 }
 
-
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } } // Correção: Removido o Promise
 ) {
   try {
     const body = await request.json();
-    const resolvedParams = await params; // Resolve a Promise uma única vez
+    const empresaId = params.id; // Agora é direto, não precisa resolver Promise
 
     // Atualiza a empresa
     const empresa = await db.empresa.update({
-      where: { id: resolvedParams.id },
+      where: { id: empresaId },
       data: {
         razaoSocial: body.razaoSocial,
         cnpj: body.cnpj,
@@ -114,7 +112,7 @@ export async function PUT(
           // Cria nova
           return db.empresaObrigacaoAcessoria.create({
             data: {
-              empresaId: resolvedParams.id, // Usando o resolvedParams
+              empresaId: empresaId, // Usando o resolvedParams
               obrigacaoAcessoriaId: oa.obrigacaoAcessoriaId,
               diaVencimento: oa.diaVencimento,
               anteciparDiaNaoUtil: oa.anteciparDiaNaoUtil,
@@ -127,7 +125,7 @@ export async function PUT(
     // Remove obrigações acessórias não enviadas
     const obrigacoesAcessoriasAtuais =
       await db.empresaObrigacaoAcessoria.findMany({
-        where: { empresaId: resolvedParams.id }, // Usando o resolvedParams
+        where: { empresaId: empresaId }, // Usando o resolvedParams
       });
 
     // E depois atualize a parte do código com o erro:
@@ -159,7 +157,7 @@ export async function PUT(
         } else {
           return db.empresaObrigacaoPrincipal.create({
             data: {
-              empresaId: resolvedParams.id,
+              empresaId: empresaId,
               obrigacaoPrincipalId: op.obrigacaoPrincipalId,
               diaVencimento: op.diaVencimento,
               anteciparDiaNaoUtil: op.anteciparDiaNaoUtil,
@@ -175,12 +173,13 @@ export async function PUT(
     // Remove obrigações principais não enviadas
     const obrigacoesPrincipaisAtuais =
       await db.empresaObrigacaoPrincipal.findMany({
-        where: { empresaId: resolvedParams.id }, // Usando o resolvedParams
+        where: { empresaId: empresaId }, // Usando o resolvedParams
       });
 
-      const obrigacoesPrincipaisParaRemover = obrigacoesPrincipaisAtuais.filter(
-        (op: ObrigacaoPrincipal) => !body.obrigacoesPrincipais.some((o: any) => o.id === op.id)
-      );
+    const obrigacoesPrincipaisParaRemover = obrigacoesPrincipaisAtuais.filter(
+      (op: ObrigacaoPrincipal) =>
+        !body.obrigacoesPrincipais.some((o: any) => o.id === op.id)
+    );
     await Promise.all(
       obrigacoesPrincipaisParaRemover.map((op: ObrigacaoPrincipal) =>
         db.empresaObrigacaoPrincipal.delete({ where: { id: op.id } })
