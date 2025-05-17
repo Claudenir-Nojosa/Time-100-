@@ -4,7 +4,7 @@ import { auth } from '../../../../../auth';
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   if (!session) {
@@ -12,10 +12,11 @@ export async function PUT(
   }
 
   try {
+    const { id } = await params;
     const { concluida } = await request.json();
     
     const pendencia = await db.pendencia.update({
-      where: { id: params.id },
+      where: { id },
       data: { concluida },
       include: {
         usuario: {
@@ -39,7 +40,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   if (!session) {
@@ -47,8 +48,9 @@ export async function DELETE(
   }
 
   try {
+    const { id } = await params;
     const pendencia = await db.pendencia.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!pendencia) {
@@ -60,7 +62,7 @@ export async function DELETE(
     }
 
     await db.pendencia.delete({
-      where: { id: params.id },
+      where: { id },
     });
     
     return NextResponse.json({ success: true });
