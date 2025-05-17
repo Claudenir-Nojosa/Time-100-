@@ -195,3 +195,38 @@ export async function PUT(
     );
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    // Primeiro deleta as relações para evitar erros de constraint
+    await db.empresaObrigacaoAcessoria.deleteMany({
+      where: { empresaId: id }
+    });
+
+    await db.empresaObrigacaoPrincipal.deleteMany({
+      where: { empresaId: id }
+    });
+
+    await db.parcelamento.deleteMany({
+      where: { empresaId: id }
+    });
+
+    // Agora deleta a empresa
+    const empresa = await db.empresa.delete({
+      where: { id }
+    });
+
+    return NextResponse.json({ success: true, empresa });
+  } catch (error) {
+    console.error("Erro ao deletar empresa:", error);
+    return NextResponse.json(
+      { error: "Erro ao deletar empresa", details: error },
+      { status: 500 }
+    );
+  }
+}
