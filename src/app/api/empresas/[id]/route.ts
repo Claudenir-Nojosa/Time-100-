@@ -15,9 +15,9 @@ interface ObrigacaoPrincipal {
   obrigacaoPrincipalId: string;
   diaVencimento: number;
   anteciparDiaNaoUtil: boolean;
-  aliquota?: number | null;  // Adicione | null
-  descricao?: string | null; // Adicione | null
-  uf?: string | null;        // Adicione | null
+  aliquota?: number | null;
+  descricao?: string | null;
+  uf?: string | null;
 }
 
 export async function GET(
@@ -25,9 +25,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const resolvedParams = await params; // Resolve a Promise primeiro
+    const { id } = await params; // Resolve a Promise
+
     const empresa = await db.empresa.findUnique({
-      where: { id: resolvedParams.id }, // Agora acessa o id corretamente
+      where: { id },
       include: {
         obrigacoesAcessorias: {
           include: {
@@ -175,9 +176,10 @@ export async function PUT(
         where: { empresaId: resolvedParams.id }, // Usando o resolvedParams
       });
 
-      const obrigacoesPrincipaisParaRemover = obrigacoesPrincipaisAtuais.filter(
-        (op: ObrigacaoPrincipal) => !body.obrigacoesPrincipais.some((o: any) => o.id === op.id)
-      );
+    const obrigacoesPrincipaisParaRemover = obrigacoesPrincipaisAtuais.filter(
+      (op: ObrigacaoPrincipal) =>
+        !body.obrigacoesPrincipais.some((o: any) => o.id === op.id)
+    );
     await Promise.all(
       obrigacoesPrincipaisParaRemover.map((op: ObrigacaoPrincipal) =>
         db.empresaObrigacaoPrincipal.delete({ where: { id: op.id } })

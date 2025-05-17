@@ -7,16 +7,11 @@ export default async function EmpresaPage({
   params: Promise<{ id: string }>;
 }) {
   try {
-    // Cria a URL correta para a API
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000';
+    const { id } = await params; // Resolve a Promise
     
-    const apiUrl = `${baseUrl}/api/empresas/${(await params).id}`;
-    
-    const response = await fetch(apiUrl, {
-      // Adiciona cache para melhor performance
-      next: { revalidate: 60 } // Revalida a cada 60 segundos
+    // Usando URL relativa para evitar problemas de ambiente
+    const response = await fetch(`/api/empresas/${id}`, {
+      next: { revalidate: 60 }
     });
 
     if (!response.ok) {
