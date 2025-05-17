@@ -22,11 +22,14 @@ interface ObrigacaoPrincipal {
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } } // Remova o Promise
+  { params }: { params: { id: string } } // Tipo correto para App Router
 ) {
   try {
+    // Se você precisa trabalhar com Promise, resolva aqui
+    const empresaId = params.id; // Já está resolvido pelo Next.js
+    
     const empresa = await db.empresa.findUnique({
-      where: { id: params.id }, // Acessa diretamente params.id
+      where: { id: empresaId },
       include: {
         obrigacoesAcessorias: {
           include: {
@@ -69,6 +72,7 @@ export async function GET(
     );
   }
 }
+
 
 export async function PUT(
   request: Request,

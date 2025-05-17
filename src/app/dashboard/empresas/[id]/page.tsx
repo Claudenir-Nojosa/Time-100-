@@ -4,18 +4,20 @@ import { EmpresaDetalhes } from "@/components/shared/empresa-detalhes";
 export default async function EmpresaPage({
   params,
 }: {
-  params: { id: string }; // Remova o Promise aqui também
+  params: { id: string } | Promise<{ id: string }>; // Aceita ambos
 }) {
   try {
-    // URL da API - versão simplificada e confiável
+    // Resolve os params caso seja Promise
+    const resolvedParams = params instanceof Promise ? await params : params;
+    
     const baseUrl = process.env.NODE_ENV === 'production'
       ? 'https://time-100.vercel.app'
       : 'http://localhost:3000';
     
-    const apiUrl = `${baseUrl}/api/empresas/${params.id}`;
+    const apiUrl = `${baseUrl}/api/empresas/${resolvedParams.id}`;
     
     const response = await fetch(apiUrl, {
-      cache: 'no-store' // Desativa cache para desenvolvimento
+      cache: 'no-store'
     });
 
     if (!response.ok) {
