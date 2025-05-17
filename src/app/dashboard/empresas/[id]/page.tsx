@@ -9,9 +9,7 @@ export default async function EmpresaPage({
   // Resolve a Promise dos parâmetros
   const resolvedParams = await params;
 
-  const response = await fetch(
-    `http://localhost:3000/api/empresas/${resolvedParams.id}`
-  );
+  const response = await fetch(`/api/empresas/${resolvedParams.id}`);
 
   if (!response.ok) {
     return notFound();
