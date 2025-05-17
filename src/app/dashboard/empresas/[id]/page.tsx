@@ -4,7 +4,7 @@ import { EmpresaDetalhes } from "@/components/shared/empresa-detalhes";
 export default async function EmpresaPage({
   params,
 }: {
-  params: { id: string }; // Não precisa ser Promise aqui
+  params: Promise<{ id: string }>;
 }) {
   try {
     // Cria a URL correta para a API
@@ -12,7 +12,7 @@ export default async function EmpresaPage({
       ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000';
     
-    const apiUrl = `${baseUrl}/api/empresas/${params.id}`;
+    const apiUrl = `${baseUrl}/api/empresas/${(await params).id}`;
     
     const response = await fetch(apiUrl, {
       // Adiciona cache para melhor performance
