@@ -22,12 +22,11 @@ interface ObrigacaoPrincipal {
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } } // Remova o Promise
 ) {
   try {
-    const resolvedParams = await params; // Resolve a Promise primeiro
     const empresa = await db.empresa.findUnique({
-      where: { id: resolvedParams.id }, // Agora acessa o id corretamente
+      where: { id: params.id }, // Acessa diretamente params.id
       include: {
         obrigacoesAcessorias: {
           include: {
