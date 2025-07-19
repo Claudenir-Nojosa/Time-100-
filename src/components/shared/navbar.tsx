@@ -32,9 +32,6 @@ export default function Navbar() {
             <Button variant="link">
               <Link href="/login">Entrar</Link>
             </Button>
-            <Button variant={"default"}>
-              <Link href="/cadastro">Criar Conta</Link>
-            </Button>
           </div>
 
           {/* Menu de hambúrguer para telas menores */}

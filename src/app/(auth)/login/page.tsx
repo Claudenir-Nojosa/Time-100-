@@ -53,13 +53,6 @@ export default async function LoginPage() {
           </div>
         </CardContent>
       </Card>
-      <p className="text-sm text-muted-foreground mt-3">
-        Não possui cadastro?{" "}
-        <Link className="text-gradient hover:underline" href="/cadastro">
-          Registre-se
-        </Link>
-        .
-      </p>
     </>
   );
 }

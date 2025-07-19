@@ -10,7 +10,7 @@ const TeamLandingPage = () => {
         <div className="max-w-6xl mx-auto px-4 py-5 flex justify-between items-center">
           <span className="text-xl font-medium tracking-tighter flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-fuchsia-500">
             <Loader className="text-fuchsia-400 animate-pulse" />
-            TIME100%
+            Boas Vindas
           </span>
           <nav className="flex space-x-6">
             <Link
@@ -18,12 +18,6 @@ const TeamLandingPage = () => {
               className="text-purple-300/80 hover:text-purple-200 transition-all duration-300 text-sm font-light tracking-wider"
             >
               ENTRAR
-            </Link>
-            <Link
-              href="/cadastro"
-              className="text-white hover:text-fuchsia-300 transition-all duration-300 text-sm font-light tracking-wider"
-            >
-              CRIAR CONTA
             </Link>
           </nav>
         </div>
@@ -50,12 +44,6 @@ const TeamLandingPage = () => {
               >
                 ACESSAR CONTA
               </Link>
-              <Link
-                href="/cadastro"
-                className="px-8 py-3.5 text-sm font-medium tracking-wider rounded-sm bg-gradient-to-r from-purple-500 to-fuchsia-500 text-black hover:from-purple-400 hover:to-fuchsia-400 transition-all duration-300 shadow-[0_0_15px_-3px_rgba(217,70,239,0.4)] hover:shadow-[0_0_20px_-3px_rgba(217,70,239,0.6)]"
-              >
-                CRIAR CONTA
-              </Link>
             </div>
           </div>
         </div>
@@ -64,7 +52,7 @@ const TeamLandingPage = () => {
       {/* Footer - Glow Effect */}
       <footer className="border-t border-purple-900/30 py-5">
         <div className="max-w-6xl mx-auto px-4 text-center text-xs text-purple-300/40 tracking-widest">
-          © TIME100% — 2025 • SISTEMA PROTEGIDO
+          © Claudeniro100% — 2025 • SISTEMA PROTEGIDO
         </div>
       </footer>
     </div>
