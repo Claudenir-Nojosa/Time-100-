@@ -4,10 +4,10 @@ import db from "@/lib/db";
 // GET status específico
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // ← Adicione Promise aqui
 ) {
   try {
-    const { id } = params;
+    const { id } = await params; // ← Aguarde a Promise
     
     const statusEmpresa = await db.statusEmpresa.findUnique({
       where: { id },
@@ -42,10 +42,10 @@ export async function GET(
 // PUT atualizar status
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // ← Adicione Promise aqui
 ) {
   try {
-    const { id } = params;
+    const { id } = await params; // ← Aguarde a Promise
     const body = await request.json();
 
     const statusEmpresa = await db.statusEmpresa.update({
@@ -85,10 +85,10 @@ export async function PUT(
 // DELETE status
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // ← Adicione Promise aqui
 ) {
   try {
-    const { id } = params;
+    const { id } = await params; // ← Aguarde a Promise
     
     await db.statusEmpresa.delete({
       where: { id }
