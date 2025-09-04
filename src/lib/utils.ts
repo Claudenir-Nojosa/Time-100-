@@ -30,7 +30,6 @@ export function createSlug(text: string): string {
 export function formatResponsavel(responsavel: string): string {
   const formatMap: Record<string, string> = {
     'CLAUDENIR': 'Claudenir',
-    'ANA_CONRADO': 'Ana Conrado'
   };
   
   return formatMap[responsavel] || responsavel;

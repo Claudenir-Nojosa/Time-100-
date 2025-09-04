@@ -20,8 +20,12 @@ import {
   ChevronDown,
   ChevronRight,
   Loader,
+  Library,
   HandCoins,
   PiggyBank,
+  Mails,
+  ScanEye,
+  Route,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession, signOut } from "next-auth/react";
@@ -106,8 +110,8 @@ export default function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b">
         {!isCollapsed && (
           <div className="flex items-center space-x-2">
-            <Loader className="text-fuchsia-400 animate-pulse" />
-            <span className="text-lg font-bold">Time 100%</span>
+            <Library className="text-white animate-pulse" />
+            <span className="text-lg font-bold">CZONE</span>
           </div>
         )}
         <Button
@@ -176,14 +180,7 @@ export default function Sidebar() {
                     <span className="ml-2">Claudenir</span>
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    href="/dashboard/empresas/ana-conrado"
-                    className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm dark:hover:bg-muted text-gray-500"
-                  >
-                    <span className="ml-2">Ana Conrado</span>
-                  </Link>
-                </li>
+                <li></li>
               </ul>
             )}
           </li>
@@ -199,92 +196,39 @@ export default function Sidebar() {
               {!isCollapsed && <span className="ml-2">Calendário</span>}
             </Link>
           </li>
-
-          {/* Obrigações Acessórias com submenu */}
           <li>
-            <div
-              onClick={() => toggleSubmenu("obrigacoes-acessorias")}
-              className={`flex items-center p-2 rounded-lg hover:bg-muted cursor-pointer ${
-                isCollapsed ? "justify-center" : "justify-between"
+            <Link
+              href="/dashboard/organograma"
+              className={`flex items-center p-2 rounded-lg hover:bg-muted ${
+                isCollapsed ? "justify-center" : ""
               }`}
             >
-              <div className="flex items-center">
-                <FileText className="h-5 w-5" />
-                {!isCollapsed && (
-                  <span className="ml-2">Obrigações Acessórias</span>
-                )}
-              </div>
-              {!isCollapsed &&
-                (openSubmenus["obrigacoes-acessorias"] ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                ))}
-            </div>
-            {!isCollapsed && openSubmenus["obrigacoes-acessorias"] && (
-              <ul className="ml-8 mt-1 space-y-1">
-                {[
-                  "EFD ICMS IPI",
-                  "DeSTDA",
-                  "EFD Contribuições",
-                  "GIA",
-                  "DIME",
-                  "GIA RS",
-                  "MIT",
-                  "EFD Reinf",
-                  "DAPI",
-                  "DECLAN"
-                ].map((item) => (
-                  <li key={item}>
-                    <Link
-                      href={`/dashboard/obrigacoes/${createSlug(item)}`}
-                      className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm dark:hover:bg-muted text-gray-500"
-                    >
-                      <span className="ml-2">{item}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
+              <Route className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-2">Organograma</span>}
+            </Link>
           </li>
-
-          {/* Obrigações Principais com submenu */}
           <li>
-            <div
-              onClick={() => toggleSubmenu("obrigacoes-principais")}
-              className={`flex items-center p-2 rounded-lg hover:bg-muted cursor-pointer ${
-                isCollapsed ? "justify-center" : "justify-between"
+            <Link
+              href="/dashboard/diagnosticos"
+              className={`flex items-center p-2 rounded-lg hover:bg-muted ${
+                isCollapsed ? "justify-center" : ""
               }`}
             >
-              <div className="flex items-center">
-                <HandCoins className="h-5 w-5" />
-                {!isCollapsed && (
-                  <span className="ml-2">Obrigações Principais</span>
-                )}
-              </div>
-              {!isCollapsed &&
-                (openSubmenus["obrigacoes-principais"] ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                ))}
-            </div>
-            {!isCollapsed && openSubmenus["obrigacoes-principais"] && (
-              <ul className="ml-8 mt-1 space-y-1">
-                {["ICMS", "PIS", "COFINS", "IPI"].map((item) => (
-                  <li key={item}>
-                    <Link
-                      href={`/dashboard/obrigacoes/${item.toLowerCase()}`}
-                      className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm dark:hover:bg-muted text-gray-500"
-                    >
-                      <span className="ml-2">{item}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
+              <ScanEye className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-2">Diagnósticos</span>}
+            </Link>
           </li>
-
+           <li>
+            <Link
+              href="/dashboard/diagnosticos"
+              className={`flex items-center p-2 rounded-lg hover:bg-muted ${
+                isCollapsed ? "justify-center" : ""
+              }`}
+            >
+              <Mails className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-2">E-mails</span>}
+            </Link>
+          </li>
           <li>
             <Link
               href="/dashboard/pendencias"
@@ -294,18 +238,6 @@ export default function Sidebar() {
             >
               <AlertCircle className="h-5 w-5" />
               {!isCollapsed && <span className="ml-2">Pendências</span>}
-            </Link>
-          </li>
-
-          <li>
-            <Link
-              href="/dashboard/parcelamentos"
-              className={`flex items-center p-2 rounded-lg hover:bg-muted ${
-                isCollapsed ? "justify-center" : ""
-              }`}
-            >
-              <PiggyBank className="h-5 w-5" />
-              {!isCollapsed && <span className="ml-2">Parcelamentos</span>}
             </Link>
           </li>
         </ul>

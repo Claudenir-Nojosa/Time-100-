@@ -61,8 +61,27 @@ model Empresa {
   obrigacoesAcessorias EmpresaObrigacaoAcessoria[]
   obrigacoesPrincipais EmpresaObrigacaoPrincipal[]
   parcelamentos        Parcelamento[]
+  status               StatusEmpresa?
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
+}
+
+model StatusEmpresa {
+  id                             String   @id @default(cuid())
+  empresaId                      String   @unique
+  integracao                     Boolean  @default(false)
+  analiseNCM                     Boolean  @default(false)
+  estudoTributacaoGeral          Boolean  @default(false)
+  levantamentoPendencias         Boolean  @default(false)
+  analiseServicos                Boolean  @default(false)
+  complianceObrigacoesAcessorias Boolean  @default(false)
+  diagnostico                    Boolean  @default(false)
+  repasse                        Boolean  @default(false)
+  competencia                    String
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }
 
 enum RegimeTributacao {
@@ -157,21 +176,22 @@ model Atividade {
   nome           String
   horario        String?
   responsavel    String
-  responsavelId  String // Adicione este campo para relacionamento
-  responsavelImg String? // Adicione este campo para a foto
+  responsavelId  String
+  responsavelImg String?
   data           DateTime
   concluida      Boolean  @default(false)
+  categoria      String   @default("apuracao") // ← Adicione este campo
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
 
 model Pendencia {
-  id          String   @id @default(cuid())
-  titulo      String
-  descricao   String?
-  concluida   Boolean  @default(false)
-  criadoEm    DateTime @default(now())
+  id           String   @id @default(cuid())
+  titulo       String
+  descricao    String?
+  concluida    Boolean  @default(false)
+  criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
-  usuarioId   String
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId    String
 }

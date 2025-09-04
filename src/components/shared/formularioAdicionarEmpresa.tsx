@@ -598,9 +598,6 @@ export function AdicionarEmpresaForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="ANA_CONRADO">
-                            Ana Conrado
-                          </SelectItem>
                           <SelectItem value="CLAUDENIR">Claudenir</SelectItem>
                         </SelectContent>
                       </Select>

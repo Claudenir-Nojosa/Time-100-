@@ -56,6 +56,8 @@ export async function POST(request: Request) {
     }
 
     console.log("[API] Criando empresa no banco de dados...");
+
+    // Primeiro cria a empresa
     const novaEmpresa = await prisma.empresa.create({
       data: {
         razaoSocial: body.razaoSocial,
@@ -125,16 +127,51 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log("[API] Empresa criada com sucesso:", {
+    // Depois cria o status inicial da empresa
+    const statusEmpresa = await prisma.statusEmpresa.create({
+      data: {
+        empresaId: novaEmpresa.id, // ← Use o ID real da empresa aqui
+        integracao: false,
+        analiseNCM: false,
+        estudoTributacaoGeral: false,
+        levantamentoPendencias: false,
+        analiseServicos: false,
+        complianceObrigacoesAcessorias: false,
+        diagnostico: false,
+        repasse: false,
+        competencia: new Date().toLocaleDateString("pt-BR", {
+          month: "2-digit",
+          year: "numeric",
+        }),
+      },
+      include: {
+        empresa: {
+          select: {
+            id: true,
+            razaoSocial: true,
+            cnpj: true,
+          },
+        },
+      },
+    });
+
+    console.log("[API] Empresa e status criados com sucesso:", {
       id: novaEmpresa.id,
       cnpj: novaEmpresa.cnpj,
       totalObrigacoes:
         novaEmpresa.obrigacoesAcessorias.length +
         novaEmpresa.obrigacoesPrincipais.length,
       totalParcelamentos: novaEmpresa.parcelamentos.length,
+      statusId: statusEmpresa.id,
     });
 
-    return NextResponse.json(novaEmpresa, { status: 201 });
+    // Retorne a empresa com o status incluído
+    const empresaComStatus = {
+      ...novaEmpresa,
+      status: statusEmpresa,
+    };
+
+    return NextResponse.json(empresaComStatus, { status: 201 });
   } catch (error: any) {
     console.error("[API] Erro completo:", {
       message: error.message,
@@ -155,7 +192,7 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const responsavel = searchParams.get('responsavel');
+    const responsavel = searchParams.get("responsavel");
 
     const where = responsavel ? { responsavel } : {};
 
@@ -170,15 +207,15 @@ export async function GET(request: Request) {
         responsavel: true,
       },
       orderBy: {
-        razaoSocial: 'asc'
-      }
+        razaoSocial: "asc",
+      },
     });
 
     return NextResponse.json(empresas);
   } catch (error) {
-    console.error('Erro ao buscar empresas:', error);
+    console.error("Erro ao buscar empresas:", error);
     return NextResponse.json(
-      { error: 'Erro ao buscar empresas' },
+      { error: "Erro ao buscar empresas" },
       { status: 500 }
     );
   }

@@ -17,6 +17,7 @@ export async function GET() {
         responsavelImg: true,
         data: true,
         concluida: true,
+        categoria: true, // ← Adicione esta linha
         createdAt: true,
         updatedAt: true,
       },
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
         responsavelImg: body.responsavelImg || null,
         data: dataAtividade,
         concluida: body.concluida || false,
+        categoria: body.categoria || "apuracao", // ← Adicione esta linha
       },
       select: {
         id: true,
@@ -88,6 +90,7 @@ export async function POST(request: Request) {
         responsavelImg: true,
         data: true,
         concluida: true,
+        categoria: true, // ← Adicione esta linha
       },
     });
 

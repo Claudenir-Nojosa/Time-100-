@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Pencil, Plus, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  Pencil,
+  Plus,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,11 +17,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useSession } from "next-auth/react";
 import { CalendarSkeleton } from "@/components/shared/CalendarSkeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { toast, Toaster } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface Atividade {
   id: string;
@@ -25,7 +46,38 @@ interface Atividade {
   responsavelImg?: string;
   data: Date;
   concluida: boolean;
+  categoria: "apuracao" | "reuniao" | "diagnostico" | "outros";
 }
+
+// Configuração das categorias
+const CATEGORIAS = {
+  apuracao: {
+    label: "Apuração",
+    cor: "bg-blue-100 text-blue-800 border-blue-200",
+    corConcluida: "bg-green-100 text-green-800 border-green-200",
+    corEscura: "bg-blue-500",
+  },
+  reuniao: {
+    label: "Reunião",
+    cor: "bg-purple-100 text-purple-800 border-purple-200",
+    corConcluida: "bg-green-100 text-green-800 border-green-200",
+    corEscura: "bg-purple-500",
+  },
+  diagnostico: {
+    label: "Diagnóstico",
+    cor: "bg-orange-100 text-orange-800 border-orange-200",
+    corConcluida: "bg-green-100 text-green-800 border-green-200",
+    corEscura: "bg-orange-500",
+  },
+  outros: {
+    label: "Outros",
+    cor: "bg-gray-100 text-gray-800 border-gray-200",
+    corConcluida: "bg-green-100 text-green-800 border-green-200",
+    corEscura: "bg-gray-200",
+  },
+} as const;
+
+type CategoriaType = keyof typeof CATEGORIAS;
 
 export default function CalendarioPage() {
   const session = useSession();
@@ -48,7 +100,18 @@ export default function CalendarioPage() {
     nome: "",
     horario: "",
     responsavel: session.data?.user.name || "",
+    categoria: "apuracao" as "apuracao" | "reuniao" | "diagnostico" | "outros",
   });
+
+  const [filtros, setFiltros] = useState<Record<CategoriaType, boolean>>({
+    apuracao: true,
+    reuniao: true,
+    diagnostico: true,
+    outros: true,
+  });
+
+  const [filtroConcluidas, setFiltroConcluidas] = useState<boolean>(true);
+  const [openFiltroPopover, setOpenFiltroPopover] = useState(false);
 
   // 2. Agora os effects
   useEffect(() => {
@@ -67,6 +130,7 @@ export default function CalendarioPage() {
           data.map((a: any) => ({
             ...a,
             data: new Date(a.data), // Conversão explícita para Date
+            categoria: a.categoria || "apuracao", // Valor padrão para categorias antigas
           }))
         );
       } catch (error) {
@@ -89,6 +153,29 @@ export default function CalendarioPage() {
   if (!session.data) {
     return null;
   }
+
+  // Função para filtrar atividades
+  const atividadesFiltradas = atividades.filter((atividade) => {
+    // Filtro por categoria
+    const categoriaFiltrada = filtros[atividade.categoria];
+
+    // Filtro por concluídas
+    const concluidaFiltrada = filtroConcluidas ? true : !atividade.concluida;
+
+    return categoriaFiltrada && concluidaFiltrada;
+  });
+
+  // Função para obter atividades do dia já filtradas
+  const getAtividadesDoDia = (date: Date) => {
+    return atividadesFiltradas.filter((atividade) => {
+      const atividadeDate = new Date(atividade.data);
+      return (
+        atividadeDate.getDate() === date.getDate() &&
+        atividadeDate.getMonth() === date.getMonth() &&
+        atividadeDate.getFullYear() === date.getFullYear()
+      );
+    });
+  };
 
   // Funções de drag and drop
   const handleDragStart = (e: React.DragEvent, atividade: Atividade) => {
@@ -240,6 +327,7 @@ export default function CalendarioPage() {
       nome: atividade.nome,
       horario: atividade.horario || "",
       responsavel: atividade.responsavel,
+      categoria: atividade.categoria,
     });
     setSelectedDate(new Date(atividade.data));
     setOpenDialog(true);
@@ -251,6 +339,7 @@ export default function CalendarioPage() {
       nome: "",
       horario: "",
       responsavel: session.data?.user?.name || "Usuário Atual",
+      categoria: "apuracao",
     });
     setSelectedDate(date);
     setOpenDialog(true);
@@ -313,6 +402,7 @@ export default function CalendarioPage() {
             nome: "",
             horario: "",
             responsavel: session.data?.user.name || "",
+            categoria: "apuracao",
           });
           setOpenDialog(false);
           return `"${novaAtividade.nome}" atualizada com sucesso!`;
@@ -350,6 +440,7 @@ export default function CalendarioPage() {
             nome: "",
             horario: "",
             responsavel: session.data?.user.name || "",
+            categoria: "apuracao",
           });
           setOpenDialog(false);
           return `"${novaAtividade.nome}" criada com sucesso!`;
@@ -360,17 +451,6 @@ export default function CalendarioPage() {
       toast.error("Ocorreu um erro ao criar a atividade");
       console.error("Erro ao criar atividade:", error);
     }
-  };
-
-  const getAtividadesDoDia = (date: Date) => {
-    return atividades.filter((atividade) => {
-      const atividadeDate = new Date(atividade.data);
-      return (
-        atividadeDate.getDate() === date.getDate() &&
-        atividadeDate.getMonth() === date.getMonth() &&
-        atividadeDate.getFullYear() === date.getFullYear()
-      );
-    });
   };
 
   const renderDays = () => {
@@ -440,75 +520,88 @@ export default function CalendarioPage() {
             </button>
           </div>
           <div className="mt-1 flex-1 space-y-1 overflow-y-auto">
-            {atividadesDoDia.map((atividade) => (
-              <div
-                key={atividade.id}
-                className={`text-xs p-1.5 rounded cursor-pointer relative group
-                  ${atividade.concluida ? "bg-green-100 text-green-800 line-through" : "bg-blue-100 text-blue-800"}
-                  hover:shadow-sm transition-shadow`}
-                onClick={() => handleToggleConcluida(atividade)}
-                draggable
-                onDragStart={(e) => handleDragStart(e, atividade)}
-                onDragEnd={handleDragEnd}
-              >
-                {/* Conteúdo da atividade (mesmo que antes) */}
-                <div className="flex justify-between items-start gap-2">
-                  {/* Avatar + Informações da atividade */}
-                  <div className="flex items-start gap-2 flex-1 min-w-0">
-                    <Avatar className="h-5 w-5 flex-shrink-0 mt-0.5">
-                      <AvatarImage
-                        src={atividade.responsavelImg || ""}
-                        alt={atividade.responsavel}
-                        className="object-cover"
-                      />
-                      <AvatarFallback className="text-xs bg-gray-100">
-                        {atividade.responsavel
-                          .split(" ")
-                          .slice(0, 2)
-                          .map((n) => n[0])
-                          .join("")
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+            {atividadesDoDia.map((atividade) => {
+              const categoriaConfig = CATEGORIAS[atividade.categoria];
+              const estilo = atividade.concluida
+                ? categoriaConfig.corConcluida
+                : categoriaConfig.cor;
 
-                    <div className="flex flex-col min-w-0">
-                      {atividade.horario && (
-                        <span className="font-medium text-xs whitespace-nowrap">
-                          {atividade.horario}
+              return (
+                <div
+                  key={atividade.id}
+                  className={`text-xs p-1.5 rounded cursor-pointer relative group border ${estilo}
+                    hover:shadow-sm transition-shadow`}
+                  onClick={() => handleToggleConcluida(atividade)}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, atividade)}
+                  onDragEnd={handleDragEnd}
+                >
+                  {/* Indicador de categoria */}
+                  <div
+                    className={`w-2 h-2 rounded-full ${CATEGORIAS[atividade.categoria].corEscura} absolute top-1 right-1`}
+                  ></div>
+
+                  <div className="flex justify-between items-start gap-2">
+                    {/* Avatar + Informações da atividade */}
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                      <Avatar className="h-5 w-5 flex-shrink-0 mt-0.5">
+                        <AvatarImage
+                          src={atividade.responsavelImg || ""}
+                          alt={atividade.responsavel}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="text-xs bg-gray-100">
+                          {atividade.responsavel
+                            .split(" ")
+                            .slice(0, 2)
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="flex flex-col min-w-0">
+                        {atividade.horario && (
+                          <span className="font-medium text-xs whitespace-nowrap">
+                            {atividade.horario}
+                          </span>
+                        )}
+                        <span className="text-xs break-words whitespace-normal">
+                          {atividade.nome}
                         </span>
-                      )}
-                      <span className="text-xs break-words whitespace-normal">
-                        {atividade.nome}
-                      </span>
+                        <span className="text-[10px] opacity-70 mt-0.5">
+                          {CATEGORIAS[atividade.categoria].label}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Botões de ação (aparecem no hover) */}
+                    <div className="flex flex-shrink-0">
+                      <button
+                        className="text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded-full p-0.5 ml-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditAtividade(atividade);
+                        }}
+                        title="Editar atividade"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        className="text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded-full p-0.5 ml-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          confirmDelete(atividade.id);
+                        }}
+                        title="Excluir atividade"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
                   </div>
-
-                  {/* Botões de ação (aparecem no hover) */}
-                  <div className="flex flex-shrink-0">
-                    <button
-                      className="text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded-full p-0.5 ml-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditAtividade(atividade);
-                      }}
-                      title="Editar atividade"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                    <button
-                      className="text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded-full p-0.5 ml-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        confirmDelete(atividade.id);
-                      }}
-                      title="Excluir atividade"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       );
@@ -551,6 +644,72 @@ export default function CalendarioPage() {
           Calendário
         </h1>
         <div className="flex items-center space-x-4 dark:bg-purple-950/20 bg-white rounded-lg shadow-sm p-2 border dark:border-purple-900/30 border-gray-200">
+          <Popover open={openFiltroPopover} onOpenChange={setOpenFiltroPopover}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="dark:border-purple-900/30 dark:hover:bg-purple-900/20"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filtrar
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 dark:bg-black dark:border-purple-900/30">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium dark:text-purple-100">
+                    Categorias
+                  </h4>
+                  <div className="grid gap-2">
+                    {Object.entries(CATEGORIAS).map(([key, categoria]) => (
+                      <div key={key} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`filter-${key}`}
+                          checked={filtros[key as CategoriaType]}
+                          onCheckedChange={(checked) => {
+                            setFiltros((prev) => ({
+                              ...prev,
+                              [key]: checked === true,
+                            }));
+                          }}
+                        />
+                        <Label
+                          htmlFor={`filter-${key}`}
+                          className="text-sm font-normal dark:text-purple-200"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-3 h-3 rounded-full ${categoria.corEscura}`}
+                            ></div>
+                            {categoria.label}
+                          </div>
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-medium dark:text-purple-100">Status</h4>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="filter-concluidas"
+                      checked={filtroConcluidas}
+                      onCheckedChange={(checked) =>
+                        setFiltroConcluidas(checked === true)
+                      }
+                    />
+                    <Label
+                      htmlFor="filter-concluidas"
+                      className="text-sm font-normal dark:text-purple-200"
+                    >
+                      Mostrar concluídas
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button
             variant="ghost"
             size="sm"
@@ -570,6 +729,29 @@ export default function CalendarioPage() {
           >
             <ChevronRight className="h-5 w-5 dark:text-purple-300 text-purple-600" />
           </Button>
+        </div>
+      </div>
+
+
+
+      {/* Legenda de categorias */}
+      <div className="flex flex-wrap gap-4 mb-6 p-4 dark:bg-purple-950/10 bg-white rounded-lg border dark:border-purple-900/30 border-gray-200">
+        {/* Categorias */}
+        {Object.entries(CATEGORIAS).map(([key, categoria]) => (
+          <div key={key} className="flex items-center gap-2">
+            <div
+              className={`w-3 h-3 rounded-full ${categoria.corEscura}`}
+            ></div>
+            <span className="text-sm dark:text-purple-200">
+              {categoria.label}
+            </span>
+          </div>
+        ))}
+
+        {/* Concluído */}
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+          <span className="text-sm dark:text-purple-200">Concluído</span>
         </div>
       </div>
 
@@ -627,6 +809,50 @@ export default function CalendarioPage() {
                 placeholder="Nome da atividade"
                 required
               />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label
+                htmlFor="categoria"
+                className="text-right dark:text-purple-200"
+              >
+                Categoria:
+              </label>
+              <Select
+                value={novaAtividade.categoria}
+                onValueChange={(
+                  value: "apuracao" | "reuniao" | "diagnostico" | "outros"
+                ) => setNovaAtividade({ ...novaAtividade, categoria: value })}
+              >
+                <SelectTrigger className="col-span-3 dark:bg-purple-950/20 dark:border-purple-900/30">
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent className="dark:bg-gray-950 dark:border-purple-900/30">
+                  <SelectItem
+                    value="apuracao"
+                    className="dark:hover:bg-purple-900/30 dark:focus:bg-purple-900/30 cursor-pointer"
+                  >
+                    Apuração
+                  </SelectItem>
+                  <SelectItem
+                    value="reuniao"
+                    className="dark:hover:bg-purple-900/30 dark:focus:bg-purple-900/30 cursor-pointer"
+                  >
+                    Reunião
+                  </SelectItem>
+                  <SelectItem
+                    value="diagnostico"
+                    className="dark:hover:bg-purple-900/30 dark:focus:bg-purple-900/30 cursor-pointer"
+                  >
+                    Diagnóstico
+                  </SelectItem>
+                  <SelectItem
+                    value="outros"
+                    className="dark:hover:bg-purple-900/30 dark:focus:bg-purple-900/30 cursor-pointer"
+                  >
+                    Outros
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <label

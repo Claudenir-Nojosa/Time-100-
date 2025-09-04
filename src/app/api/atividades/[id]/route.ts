@@ -3,10 +3,10 @@ import db from '@/lib/db';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }  // Parâmetro como Promise
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;  // Resolve a Promise
+    const { id } = await params;
     
     await db.atividade.delete({
       where: { id }
@@ -23,12 +23,12 @@ export async function DELETE(
 }
 
 export async function PUT(
-  request: Request,  // Pode ser `Request` ou `NextRequest`
-  { params }: { params: Promise<{ id: string }> }  // Parâmetro como Promise
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;  // Resolve a Promise
-    const { nome, horario, responsavel, data, concluida } = await request.json();
+    const { id } = await params;
+    const { nome, horario, responsavel, data, concluida, categoria } = await request.json(); // ← Adicione categoria
 
     const atividade = await db.atividade.update({
       where: { id },
@@ -38,6 +38,18 @@ export async function PUT(
         responsavel,
         data: new Date(data),
         concluida,
+        categoria, // ← Adicione esta linha
+      },
+      select: {
+        id: true,
+        nome: true,
+        horario: true,
+        responsavel: true,
+        responsavelId: true,
+        responsavelImg: true,
+        data: true,
+        concluida: true,
+        categoria: true, // ← Adicione esta linha
       },
     });
 

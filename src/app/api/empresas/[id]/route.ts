@@ -53,6 +53,7 @@ export async function GET(
             numero: "asc",
           },
         },
+        status: true,
       },
     });
 
@@ -205,20 +206,20 @@ export async function DELETE(
 
     // Primeiro deleta as relações para evitar erros de constraint
     await db.empresaObrigacaoAcessoria.deleteMany({
-      where: { empresaId: id }
+      where: { empresaId: id },
     });
 
     await db.empresaObrigacaoPrincipal.deleteMany({
-      where: { empresaId: id }
+      where: { empresaId: id },
     });
 
     await db.parcelamento.deleteMany({
-      where: { empresaId: id }
+      where: { empresaId: id },
     });
 
     // Agora deleta a empresa
     const empresa = await db.empresa.delete({
-      where: { id }
+      where: { id },
     });
 
     return NextResponse.json({ success: true, empresa });
