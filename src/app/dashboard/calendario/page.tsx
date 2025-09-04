@@ -59,9 +59,9 @@ const CATEGORIAS = {
   },
   reuniao: {
     label: "Reunião",
-    cor: "bg-purple-100 text-purple-800 border-purple-200",
+    cor: "bg-emerald-100 text-emerald-800 border-emerald-200",
     corConcluida: "bg-green-100 text-green-800 border-green-200",
-    corEscura: "bg-purple-500",
+    corEscura: "bg-emerald-500",
   },
   diagnostico: {
     label: "Diagnóstico",
@@ -190,16 +190,16 @@ export default function CalendarioPage() {
 
   const handleDragOver = (e: React.DragEvent, date: Date) => {
     e.preventDefault();
-    e.currentTarget.classList.add("bg-purple-100", "dark:bg-purple-900/20");
+    e.currentTarget.classList.add("bg-emerald-100", "dark:bg-emerald-900/20");
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove("bg-purple-100", "dark:bg-purple-900/20");
+    e.currentTarget.classList.remove("bg-emerald-100", "dark:bg-emerald-900/20");
   };
 
   const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
     e.preventDefault();
-    e.currentTarget.classList.remove("bg-purple-100", "dark:bg-purple-900/20");
+    e.currentTarget.classList.remove("bg-emerald-100", "dark:bg-emerald-900/20");
 
     if (!draggedAtividade) return;
 
@@ -464,11 +464,11 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`empty-${i}`}
-          className={`min-h-40 p-2 border dark:border-purple-900/40 ${
+          className={`min-h-40 p-2 border dark:border-emerald-900/40 ${
             isWeekend(dayIndex)
-              ? "dark:bg-gray-900 bg-purple-50/30"
+              ? "dark:bg-gray-900 bg-emerald-50/30"
               : "dark:bg-gray-950 bg-white"
-          } text-gray-400 dark:text-purple-500/70`}
+          } text-gray-400 dark:text-emerald-500/70`}
         >
           <div className="flex justify-between items-start">
             <span>{prevDate.getDate()}</span>
@@ -487,15 +487,15 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`day-${i}`}
-          className={`min-h-40 p-2 border dark:border-purple-900/40 transition-all flex flex-col
+          className={`min-h-40 p-2 border dark:border-emerald-900/40 transition-all flex flex-col
             ${
               isToday
-                ? "dark:bg-purple-900/30 bg-purple-100 border-purple-300 dark:border-purple-600"
+                ? "dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-600"
                 : ""
             }
             ${
               isWeekend(dayIndex)
-                ? "dark:bg-gray-900 bg-purple-50/30"
+                ? "dark:bg-gray-900 bg-emerald-50/30"
                 : "dark:bg-gray-950 bg-white"
             }`}
           onDragOver={(e) => handleDragOver(e, currentDay)}
@@ -506,8 +506,8 @@ export default function CalendarioPage() {
             <span
               className={`text-sm font-medium ${
                 isToday
-                  ? "bg-gradient-to-br from-purple-500 via-purple-600 to-fuchsia-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-[0_0_6px_0_rgba(192,132,252,0.7)]"
-                  : "dark:text-purple-100 text-gray-800 "
+                  ? "bg-gradient-to-br from-emerald-500 via-emerald-600 to-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-[0_0_6px_0_rgba(192,132,252,0.7)]"
+                  : "dark:text-emerald-100 text-gray-800 "
               }`}
             >
               {i}
@@ -617,11 +617,11 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`next-${i}`}
-          className={`min-h-40 p-2 border dark:border-purple-900/40 ${
+          className={`min-h-40 p-2 border dark:border-emerald-900/40 ${
             isWeekend(dayIndex)
-              ? "dark:bg-gray-900 bg-purple-50/30"
+              ? "dark:bg-gray-900 bg-emerald-50/30"
               : "dark:bg-gray-950 bg-white"
-          } text-gray-400 dark:text-purple-500/70`}
+          } text-gray-400 dark:text-emerald-500/70`}
           onDragOver={(e) => handleDragOver(e, nextDate)}
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, nextDate)}
@@ -637,27 +637,27 @@ export default function CalendarioPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 dark:bg-black mt-10">
+    <div className="container mx-auto py-8 px-4 mt-10">
       {/* Cabeçalho */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold dark:text-purple-100 text-gray-800">
+        <h1 className="text-3xl font-bold dark:text-emerald-100 text-gray-800">
           Calendário
         </h1>
-        <div className="flex items-center space-x-4 dark:bg-purple-950/20 bg-white rounded-lg shadow-sm p-2 border dark:border-purple-900/30 border-gray-200">
+        <div className="flex items-center space-x-4 dark:bg-emerald-950/20 bg-white rounded-lg shadow-sm p-2 border dark:border-emerald-900/30 border-gray-200">
           <Popover open={openFiltroPopover} onOpenChange={setOpenFiltroPopover}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="dark:border-purple-900/30 dark:hover:bg-purple-900/20"
+                className="dark:border-emerald-900/30 dark:hover:bg-emerald-900/20"
               >
                 <Filter className="h-4 w-4 mr-2" />
                 Filtrar
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 dark:bg-black dark:border-purple-900/30">
+            <PopoverContent className="w-80 dark:bg-black dark:border-emerald-900/30">
               <div className="grid gap-4">
                 <div className="space-y-2">
-                  <h4 className="font-medium dark:text-purple-100">
+                  <h4 className="font-medium dark:text-emerald-100">
                     Categorias
                   </h4>
                   <div className="grid gap-2">
@@ -675,7 +675,7 @@ export default function CalendarioPage() {
                         />
                         <Label
                           htmlFor={`filter-${key}`}
-                          className="text-sm font-normal dark:text-purple-200"
+                          className="text-sm font-normal dark:text-emerald-200"
                         >
                           <div className="flex items-center gap-2">
                             <div
@@ -690,7 +690,7 @@ export default function CalendarioPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-medium dark:text-purple-100">Status</h4>
+                  <h4 className="font-medium dark:text-emerald-100">Status</h4>
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="filter-concluidas"
@@ -701,7 +701,7 @@ export default function CalendarioPage() {
                     />
                     <Label
                       htmlFor="filter-concluidas"
-                      className="text-sm font-normal dark:text-purple-200"
+                      className="text-sm font-normal dark:text-emerald-200"
                     >
                       Mostrar concluídas
                     </Label>
@@ -714,20 +714,20 @@ export default function CalendarioPage() {
             variant="ghost"
             size="sm"
             onClick={prevMonth}
-            className="dark:hover:bg-purple-900/30 hover:bg-purple-100 rounded-full p-2"
+            className="dark:hover:bg-emerald-900/30 hover:bg-emerald-100 rounded-full p-2"
           >
-            <ChevronLeft className="h-5 w-5 dark:text-purple-300 text-purple-600" />
+            <ChevronLeft className="h-5 w-5 dark:text-emerald-300 text-emerald-600" />
           </Button>
-          <h2 className="text-xl font-semibold dark:text-purple-100 text-gray-700 min-w-[180px] text-center">
+          <h2 className="text-xl font-semibold dark:text-emerald-100 text-gray-700 min-w-[180px] text-center">
             {monthNames[month]} {year}
           </h2>
           <Button
             variant="ghost"
             size="sm"
             onClick={nextMonth}
-            className="dark:hover:bg-purple-900/30 hover:bg-purple-100 rounded-full p-2"
+            className="dark:hover:bg-emerald-900/30 hover:bg-emerald-100 rounded-full p-2"
           >
-            <ChevronRight className="h-5 w-5 dark:text-purple-300 text-purple-600" />
+            <ChevronRight className="h-5 w-5 dark:text-emerald-300 text-emerald-600" />
           </Button>
         </div>
       </div>
@@ -735,14 +735,14 @@ export default function CalendarioPage() {
 
 
       {/* Legenda de categorias */}
-      <div className="flex flex-wrap gap-4 mb-6 p-4 dark:bg-purple-950/10 bg-white rounded-lg border dark:border-purple-900/30 border-gray-200">
+      <div className="flex flex-wrap gap-4 mb-6 p-4 dark:bg-emerald-950/10 bg-white rounded-lg border dark:border-emerald-900/30 border-gray-200">
         {/* Categorias */}
         {Object.entries(CATEGORIAS).map(([key, categoria]) => (
           <div key={key} className="flex items-center gap-2">
             <div
               className={`w-3 h-3 rounded-full ${categoria.corEscura}`}
             ></div>
-            <span className="text-sm dark:text-purple-200">
+            <span className="text-sm dark:text-emerald-200">
               {categoria.label}
             </span>
           </div>
@@ -751,21 +751,21 @@ export default function CalendarioPage() {
         {/* Concluído */}
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-green-500"></div>
-          <span className="text-sm dark:text-purple-200">Concluído</span>
+          <span className="text-sm dark:text-emerald-200">Concluído</span>
         </div>
       </div>
 
       {/* Grid do Calendário */}
-      <div className="dark:bg-purple-950/10 bg-white rounded-xl shadow-sm overflow-hidden border dark:border-purple-900/30 border-gray-200">
-        <div className="grid grid-cols-7 gap-px dark:bg-purple-950/20 bg-gray-50 border-b dark:border-purple-900/30 border-gray-200">
+      <div className="dark:bg-emerald-950/10 bg-white rounded-xl shadow-sm overflow-hidden border dark:border-emerald-900/30 border-gray-200">
+        <div className="grid grid-cols-7 gap-px dark:bg-emerald-950/20 bg-gray-50 border-b dark:border-emerald-900/30 border-gray-200">
           {dayNames.map((day, index) => (
             <div
               key={day}
               className={`py-3 text-center font-medium text-sm 
                 ${
                   isWeekend(index)
-                    ? "dark:text-purple-300 text-purple-600 dark:bg-purple-950/10 bg-purple-50/30"
-                    : "dark:text-purple-100 text-gray-700"
+                    ? "dark:text-emerald-300 text-emerald-600 dark:bg-emerald-950/10 bg-emerald-50/30"
+                    : "dark:text-emerald-100 text-gray-700"
                 }`}
             >
               {day}
@@ -787,16 +787,16 @@ export default function CalendarioPage() {
         open={openDialog}
         onOpenChange={(open) => !open && setOpenDialog(false)}
       >
-        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-purple-900/30 bg-white">
+        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-emerald-900/30 bg-white">
           <DialogHeader>
-            <DialogTitle className="dark:text-purple-100">
+            <DialogTitle className="dark:text-emerald-100">
               {atividadeParaEditar ? "Editar Atividade" : "Nova Atividade"}
             </DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="nome" className="text-right dark:text-purple-200">
+              <label htmlFor="nome" className="text-right dark:text-emerald-200">
                 Nome:
               </label>
               <Input
@@ -805,7 +805,7 @@ export default function CalendarioPage() {
                 onChange={(e) =>
                   setNovaAtividade({ ...novaAtividade, nome: e.target.value })
                 }
-                className="col-span-3 dark:bg-purple-950/20 dark:border-purple-900/30"
+                className="col-span-3 dark:bg-emerald-950/20 dark:border-emerald-900/30"
                 placeholder="Nome da atividade"
                 required
               />
@@ -813,7 +813,7 @@ export default function CalendarioPage() {
             <div className="grid grid-cols-4 items-center gap-4">
               <label
                 htmlFor="categoria"
-                className="text-right dark:text-purple-200"
+                className="text-right dark:text-emerald-200"
               >
                 Categoria:
               </label>
@@ -823,31 +823,31 @@ export default function CalendarioPage() {
                   value: "apuracao" | "reuniao" | "diagnostico" | "outros"
                 ) => setNovaAtividade({ ...novaAtividade, categoria: value })}
               >
-                <SelectTrigger className="col-span-3 dark:bg-purple-950/20 dark:border-purple-900/30">
+                <SelectTrigger className="col-span-3 dark:bg-emerald-950/20 dark:border-emerald-900/30">
                   <SelectValue placeholder="Selecione a categoria" />
                 </SelectTrigger>
-                <SelectContent className="dark:bg-gray-950 dark:border-purple-900/30">
+                <SelectContent className="dark:bg-gray-950 dark:border-emerald-900/30">
                   <SelectItem
                     value="apuracao"
-                    className="dark:hover:bg-purple-900/30 dark:focus:bg-purple-900/30 cursor-pointer"
+                    className="dark:hover:bg-emerald-900/30 dark:focus:bg-emerald-900/30 cursor-pointer"
                   >
                     Apuração
                   </SelectItem>
                   <SelectItem
                     value="reuniao"
-                    className="dark:hover:bg-purple-900/30 dark:focus:bg-purple-900/30 cursor-pointer"
+                    className="dark:hover:bg-emerald-900/30 dark:focus:bg-emerald-900/30 cursor-pointer"
                   >
                     Reunião
                   </SelectItem>
                   <SelectItem
                     value="diagnostico"
-                    className="dark:hover:bg-purple-900/30 dark:focus:bg-purple-900/30 cursor-pointer"
+                    className="dark:hover:bg-emerald-900/30 dark:focus:bg-emerald-900/30 cursor-pointer"
                   >
                     Diagnóstico
                   </SelectItem>
                   <SelectItem
                     value="outros"
-                    className="dark:hover:bg-purple-900/30 dark:focus:bg-purple-900/30 cursor-pointer"
+                    className="dark:hover:bg-emerald-900/30 dark:focus:bg-emerald-900/30 cursor-pointer"
                   >
                     Outros
                   </SelectItem>
@@ -857,7 +857,7 @@ export default function CalendarioPage() {
             <div className="grid grid-cols-4 items-center gap-4">
               <label
                 htmlFor="horario"
-                className="text-right dark:text-purple-200"
+                className="text-right dark:text-emerald-200"
               >
                 Horário:
               </label>
@@ -871,13 +871,13 @@ export default function CalendarioPage() {
                     horario: e.target.value,
                   })
                 }
-                className="col-span-3 dark:bg-purple-950/20 dark:border-purple-900/30"
+                className="col-span-3 dark:bg-emerald-950/20 dark:border-emerald-900/30"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <label
                 htmlFor="responsavel"
-                className="text-right dark:text-purple-200"
+                className="text-right dark:text-emerald-200"
               >
                 Responsável:
               </label>
@@ -885,18 +885,18 @@ export default function CalendarioPage() {
                 id="responsavel"
                 value={novaAtividade.responsavel}
                 readOnly
-                className="col-span-3 dark:bg-purple-950/30 dark:border-purple-900/30"
+                className="col-span-3 dark:bg-emerald-950/30 dark:border-emerald-900/30"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="data" className="text-right dark:text-purple-200">
+              <label htmlFor="data" className="text-right dark:text-emerald-200">
                 Data:
               </label>
               <Input
                 id="data"
                 value={selectedDate?.toLocaleDateString("pt-BR")}
                 readOnly
-                className="col-span-3 dark:bg-purple-950/30 dark:border-purple-900/30"
+                className="col-span-3 dark:bg-emerald-950/30 dark:border-emerald-900/30"
               />
             </div>
           </div>
@@ -904,13 +904,13 @@ export default function CalendarioPage() {
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
-              className="dark:border-purple-900/30 dark:hover:bg-purple-900/20"
+              className="dark:border-emerald-900/30 dark:hover:bg-emerald-900/20"
               onClick={() => setOpenDialog(false)}
             >
               Cancelar
             </Button>
             <Button
-              className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white"
+              className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white"
               onClick={
                 atividadeParaEditar ? handleUpdateAtividade : handleAddAtividade
               }
@@ -924,19 +924,19 @@ export default function CalendarioPage() {
 
       {/* Dialog de confirmação de exclusão */}
       <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-purple-900/30 bg-white border-2">
+        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-emerald-900/30 bg-white border-2">
           <DialogHeader>
-            <DialogTitle className="dark:text-purple-100">
+            <DialogTitle className="dark:text-emerald-100">
               Confirmar Exclusão
             </DialogTitle>
           </DialogHeader>
-          <p className="dark:text-purple-200">
+          <p className="dark:text-emerald-200">
             Tem certeza que deseja excluir esta atividade?
           </p>
           <div className="flex justify-end gap-2 mt-4">
             <Button
               variant="outline"
-              className="dark:border-purple-900/30 dark:hover:bg-purple-900/20"
+              className="dark:border-emerald-900/30 dark:hover:bg-emerald-900/20"
               onClick={() => setOpenDeleteDialog(false)}
             >
               Cancelar

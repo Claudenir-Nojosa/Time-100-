@@ -37,9 +37,8 @@ interface StatusEmpresa {
     cnpj: string;
   };
 }
-export default function OrganogramaPage() {
-  // ← Mude o nome para OrganogramaPage e use export default
 
+export default function OrganogramaPage() {
   const [data, setData] = useState<StatusEmpresa[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +134,7 @@ export default function OrganogramaPage() {
       accessorKey: "empresa.razaoSocial",
       header: "Nome da Empresa",
       cell: ({ row }) => (
-        <span className="dark:text-purple-100 text-gray-800 font-medium">
+        <span className="text-emerald-700 dark:text-emerald-100 font-medium">
           {row.original.empresa?.razaoSocial || "Empresa não encontrada"}
         </span>
       ),
@@ -156,11 +155,11 @@ export default function OrganogramaPage() {
             }
           >
             {isUpdating ? (
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
             ) : integracao ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500" />
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-500" />
             )}
           </div>
         );
@@ -182,11 +181,11 @@ export default function OrganogramaPage() {
             }
           >
             {isUpdating ? (
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
             ) : analiseNCM ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500" />
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-500" />
             )}
           </div>
         );
@@ -209,11 +208,11 @@ export default function OrganogramaPage() {
             }
           >
             {isUpdating ? (
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
             ) : estudoTributacaoGeral ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500" />
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-500" />
             )}
           </div>
         );
@@ -236,11 +235,11 @@ export default function OrganogramaPage() {
             }
           >
             {isUpdating ? (
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
             ) : levantamentoPendencias ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500" />
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-500" />
             )}
           </div>
         );
@@ -262,11 +261,11 @@ export default function OrganogramaPage() {
             }
           >
             {isUpdating ? (
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
             ) : analiseServicos ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500" />
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-500" />
             )}
           </div>
         );
@@ -291,11 +290,11 @@ export default function OrganogramaPage() {
             }
           >
             {isUpdating ? (
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
             ) : complianceObrigacoesAcessorias ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500" />
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-500" />
             )}
           </div>
         );
@@ -317,11 +316,11 @@ export default function OrganogramaPage() {
             }
           >
             {isUpdating ? (
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
             ) : diagnostico ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500" />
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-500" />
             )}
           </div>
         );
@@ -343,11 +342,11 @@ export default function OrganogramaPage() {
             }
           >
             {isUpdating ? (
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
             ) : repasse ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500" />
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-500" />
             )}
           </div>
         );
@@ -357,7 +356,7 @@ export default function OrganogramaPage() {
       accessorKey: "competencia",
       header: "Competência que Entrou",
       cell: ({ row }) => (
-        <span className="dark:text-purple-200 text-gray-700">
+        <span className="text-emerald-600 dark:text-emerald-200">
           {row.getValue("competencia")}
         </span>
       ),
@@ -395,14 +394,14 @@ export default function OrganogramaPage() {
 
   if (loading) {
     return (
-      <div className="rounded-xl overflow-hidden dark:border-purple-900/30 border-gray-200 shadow-sm mt-10">
-        <div className="p-4 dark:bg-purple-700/20 bg-gray-100 border-b dark:border-purple-500/30 border-gray-200">
-          <h2 className="text-xl font-bold items-center text-center">
+      <div className="rounded-xl overflow-hidden border border-emerald-200 dark:border-emerald-900/30 shadow-sm mt-10">
+        <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-200 dark:border-emerald-900/30">
+          <h2 className="text-xl font-bold items-center text-center text-emerald-800 dark:text-emerald-300">
             Status das Empresas
           </h2>
         </div>
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <div className="flex justify-center items-center h-64 bg-white dark:bg-gray-950">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600 dark:text-emerald-400" />
         </div>
       </div>
     );
@@ -410,38 +409,38 @@ export default function OrganogramaPage() {
 
   if (error) {
     return (
-      <div className="rounded-xl overflow-hidden dark:border-purple-900/30 border-gray-200 shadow-sm mt-10">
-        <div className="p-4 dark:bg-purple-700/20 bg-gray-100 border-b dark:border-purple-500/30 border-gray-200">
-          <h2 className="text-xl font-bold items-center text-center">
+      <div className="rounded-xl overflow-hidden border border-emerald-200 dark:border-emerald-900/30 shadow-sm mt-10">
+        <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-200 dark:border-emerald-900/30">
+          <h2 className="text-xl font-bold items-center text-center text-emerald-800 dark:text-emerald-300">
             Status das Empresas
           </h2>
         </div>
-        <div className="flex justify-center items-center h-64">
-          <p className="text-red-500 dark:text-red-400">{error}</p>
+        <div className="flex justify-center items-center h-64 bg-white dark:bg-gray-950">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl overflow-hidden dark:border-purple-900/30 border-gray-200 shadow-sm mt-10">
-      <div className="p-4 dark:bg-purple-700/20 bg-gray-100 border-b dark:border-purple-500/30 border-gray-200">
-        <h2 className="text-xl font-bold items-center text-center">
+    <div className="rounded-xl overflow-hidden border border-emerald-200 dark:border-emerald-900/30 shadow-sm mt-10">
+      <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-200 dark:border-emerald-900/30">
+        <h2 className="text-xl font-bold items-center text-center text-emerald-800 dark:text-emerald-300">
           Status das Empresas
         </h2>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto bg-white dark:bg-gray-950">
         <Table className="border-collapse min-w-max">
-          <TableHeader className="dark:bg-purple-950/20 bg-purple-50/30">
+          <TableHeader className="bg-emerald-100/50 dark:bg-emerald-950/20">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
-                className="dark:border-purple-900/30 border-gray-200"
+                className="border-emerald-200 dark:border-emerald-900/30"
               >
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="dark:text-purple-300 text-purple-600 font-medium py-3 px-4 whitespace-nowrap text-center"
+                    className="text-emerald-800 dark:text-emerald-100 font-medium py-3 px-4 whitespace-nowrap text-center"
                   >
                     {header.isPlaceholder
                       ? null
@@ -459,13 +458,13 @@ export default function OrganogramaPage() {
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="dark:border-purple-900/30 border-gray-200 dark:hover:bg-purple-900/10 hover:bg-purple-50/30 transition-colors"
+                  className="border-emerald-200 dark:border-emerald-900/30 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors"
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className="py-3 px-4 dark:bg-gray-950 bg-white text-center"
+                      className="py-3 px-4 bg-white dark:bg-gray-950 text-center"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -479,7 +478,7 @@ export default function OrganogramaPage() {
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center dark:text-purple-300 text-purple-600 dark:bg-gray-950 bg-white"
+                  className="h-24 text-center text-emerald-700 dark:text-emerald-300 bg-white dark:bg-gray-950"
                 >
                   Nenhuma empresa encontrada
                 </TableCell>
@@ -489,12 +488,13 @@ export default function OrganogramaPage() {
         </Table>
       </div>
 
-      <div className="p-4 dark:bg-purple-700/20 bg-gray-100 border-t dark:border-purple-500/30 border-gray-200">
-        <div className="text-sm dark:text-purple-300 text-purple-600 text-center">
+      <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border-t border-emerald-200 dark:border-emerald-900/30">
+        <div className="text-sm text-emerald-700 dark:text-emerald-300 text-center">
           Legenda:{" "}
-          <CheckCircle className="h-4 w-4 inline text-green-500 mx-1" /> =
-          Concluído,
-          <XCircle className="h-4 w-4 inline text-red-500 mx-1" /> = Pendente
+          <CheckCircle className="h-4 w-4 inline text-green-600 dark:text-green-500 mx-1" />{" "}
+          = Concluído,
+          <XCircle className="h-4 w-4 inline text-red-600 dark:text-red-500 mx-1" />{" "}
+          = Pendente
         </div>
       </div>
     </div>

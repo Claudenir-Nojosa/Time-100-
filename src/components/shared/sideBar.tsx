@@ -26,6 +26,7 @@ import {
   Mails,
   ScanEye,
   Route,
+  Server,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession, signOut } from "next-auth/react";
@@ -102,23 +103,23 @@ export default function Sidebar() {
 
   return (
     <div
-      className={`flex flex-col h-screen bg-background border-r ${
+      className={`flex flex-col h-screen bg-gray-950 border-r border-emerald-900/30 ${
         isCollapsed ? "w-16" : "w-64"
       } transition-all duration-300`}
     >
       {/* Topo da Sidebar */}
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between p-4 border-b border-emerald-900/30">
         {!isCollapsed && (
           <div className="flex items-center space-x-2">
-            <Library className="text-white animate-pulse" />
-            <span className="text-lg font-bold">CZONE</span>
+            <Server className="text-emerald-400 animate-pulse" />
+            <span className="text-lg font-bold text-white">CZONE</span>
           </div>
         )}
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
-          className="hover:bg-muted"
+          className="hover:bg-emerald-900/20 text-emerald-200"
         >
           <Menu className="h-5 w-5" />
         </Button>
@@ -130,7 +131,7 @@ export default function Sidebar() {
           <li>
             <Link
               href="/dashboard"
-              className={`flex items-center p-2 rounded-lg hover:bg-muted ${
+              className={`flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 ${
                 isCollapsed ? "justify-center" : ""
               }`}
             >
@@ -144,7 +145,7 @@ export default function Sidebar() {
             <div className="flex items-center">
               <Link
                 href="/dashboard/empresas"
-                className="flex items-center p-2 rounded-lg hover:bg-muted w-full"
+                className="flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 w-full"
               >
                 <Building className="h-5 w-5" />
                 {!isCollapsed && <span className="ml-2">Empresas</span>}
@@ -152,7 +153,7 @@ export default function Sidebar() {
               {!isCollapsed && (
                 <button
                   onClick={() => toggleSubmenu("empresas")}
-                  className="p-1 rounded-full hover:bg-gray-200"
+                  className="p-1 rounded-full hover:bg-emerald-900/20 text-emerald-300"
                 >
                   {openSubmenus["empresas"] ? (
                     <ChevronDown className="h-4 w-4" />
@@ -167,7 +168,7 @@ export default function Sidebar() {
                 <li>
                   <Link
                     href="/dashboard/empresas/adicionar"
-                    className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm dark:hover:bg-muted text-gray-500"
+                    className="flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-sm text-emerald-300/70 hover:text-emerald-200"
                   >
                     <span className="ml-2">Adicionar Empresa</span>
                   </Link>
@@ -175,12 +176,11 @@ export default function Sidebar() {
                 <li>
                   <Link
                     href="/dashboard/empresas/claudenir"
-                    className="flex items-center p-2 rounded-lg hover:bg-gray-50 text-sm dark:hover:bg-muted text-gray-500"
+                    className="flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-sm text-emerald-300/70 hover:text-emerald-200"
                   >
                     <span className="ml-2">Claudenir</span>
                   </Link>
                 </li>
-                <li></li>
               </ul>
             )}
           </li>
@@ -188,7 +188,7 @@ export default function Sidebar() {
           <li>
             <Link
               href="/dashboard/calendario"
-              className={`flex items-center p-2 rounded-lg hover:bg-muted ${
+              className={`flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 ${
                 isCollapsed ? "justify-center" : ""
               }`}
             >
@@ -199,7 +199,7 @@ export default function Sidebar() {
           <li>
             <Link
               href="/dashboard/organograma"
-              className={`flex items-center p-2 rounded-lg hover:bg-muted ${
+              className={`flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 ${
                 isCollapsed ? "justify-center" : ""
               }`}
             >
@@ -210,7 +210,7 @@ export default function Sidebar() {
           <li>
             <Link
               href="/dashboard/diagnosticos"
-              className={`flex items-center p-2 rounded-lg hover:bg-muted ${
+              className={`flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 ${
                 isCollapsed ? "justify-center" : ""
               }`}
             >
@@ -218,10 +218,10 @@ export default function Sidebar() {
               {!isCollapsed && <span className="ml-2">Diagnósticos</span>}
             </Link>
           </li>
-           <li>
+          <li>
             <Link
-              href="/dashboard/diagnosticos"
-              className={`flex items-center p-2 rounded-lg hover:bg-muted ${
+              href="/dashboard/emails"
+              className={`flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 ${
                 isCollapsed ? "justify-center" : ""
               }`}
             >
@@ -232,7 +232,7 @@ export default function Sidebar() {
           <li>
             <Link
               href="/dashboard/pendencias"
-              className={`flex items-center p-2 rounded-lg hover:bg-muted ${
+              className={`flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 ${
                 isCollapsed ? "justify-center" : ""
               }`}
             >
@@ -244,11 +244,11 @@ export default function Sidebar() {
       </nav>
 
       {/* Rodapé da Sidebar */}
-      <div className="p-4 border-t">
+      <div className="p-4 border-t border-emerald-900/30">
         <ul className="space-y-1">
           <li>
             <div
-              className={`flex items-center p-2 rounded-lg hover:bg-muted ${
+              className={`flex items-center p-2 rounded-lg hover:bg-emerald-900/20 ${
                 isCollapsed ? "justify-center" : ""
               }`}
             >
@@ -257,14 +257,16 @@ export default function Sidebar() {
                   src={session?.user?.image || ""}
                   alt={session?.user?.name || "Usuário"}
                 />
-                <AvatarFallback>
+                <AvatarFallback className="bg-emerald-800 text-emerald-200">
                   {getInitials(session?.user?.name)}
                 </AvatarFallback>
               </Avatar>
               {!isCollapsed && (
                 <div className="ml-2">
-                  <p className="text-sm font-medium">{session?.user?.name}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm font-medium text-emerald-300">
+                    {session?.user?.name}
+                  </p>
+                  <p className="text-xs text-emerald-100">
                     {session?.user?.email}
                   </p>
                 </div>
@@ -274,7 +276,7 @@ export default function Sidebar() {
           <li>
             <Button
               variant="ghost"
-              className={`w-full justify-start p-2 rounded-lg hover:bg-muted ${
+              className={`w-full justify-start p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 ${
                 isCollapsed ? "justify-center" : ""
               }`}
               onClick={() => signOut()}

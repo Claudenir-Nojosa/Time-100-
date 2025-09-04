@@ -31,7 +31,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased dark:bg-gray-950`}
       >
         <SessionProvider session={session}>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>

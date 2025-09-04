@@ -37,7 +37,7 @@ export default async function LoginPage() {
       </div>
       <Card className="max-w-sm w-full rounded-2xl mt-12">
         <CardHeader>
-          <h2 className="text-xl font-bold">Boas Vindas</h2>
+          <h2 className="text-xl font-bold">CZONE</h2>
           <CardDescription>Faça seu login com email e senha.</CardDescription>
         </CardHeader>
         <CardContent>

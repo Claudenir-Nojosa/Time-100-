@@ -8,48 +8,50 @@ html, body {
 
 @layer base {
   :root {
-    /* Light Mode - Futuristic Purple */
-    --foreground: 266 100% 10%;
-    --card-foreground: 266 100% 10%;
-    --popover: 255 255% 255%;
-    --popover-foreground: 266 100% 10%;
-    --primary: 266 100% 50%;
-    --primary-foreground: 255 255% 255%;
-    --secondary: 270 100% 96%;
-    --secondary-foreground: 266 100% 20%;
-    --muted: 270 20% 95%;
-    --muted-foreground: 266 20% 40%;
-    --accent: 275 100% 95%;
-    --accent-foreground: 266 100% 20%;
+    /* Light Mode - Futuristic Emerald */
+    --background: 0 0% 100%;
+    --foreground: 160 84% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 160 84% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 84% 10%;
+    --primary: 160 84% 40%;
+    --primary-foreground: 355 100% 97%;
+    --secondary: 150 50% 96%;
+    --secondary-foreground: 160 84% 20%;
+    --muted: 150 20% 95%;
+    --muted-foreground: 160 20% 40%;
+    --accent: 155 70% 95%;
+    --accent-foreground: 160 84% 20%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 270 30% 85%;
-    --input: 270 30% 85%;
-    --ring: 262 100% 50%;
+    --destructive-foreground: 355 100% 97%;
+    --border: 150 30% 85%;
+    --input: 150 30% 85%;
+    --ring: 160 84% 40%;
     --radius: 0.5rem;
   }
 
   .dark {
-    /* Dark Mode - Neon Futuristic */
-    --background: 249 100% 3%;
-    --foreground: 270 100% 95%;
-    --card: 266 100% 5%;
-    --card-foreground: 270 100% 95%;
-    --popover: 266 100% 5%;
-    --popover-foreground: 270 100% 95%;
-    --primary: 266 100% 50%;
-    --primary-foreground: 270 100% 95%;
-    --secondary: 266 50% 15%;
-    --secondary-foreground: 270 100% 95%;
-    --muted: 266 30% 20%;
-    --muted-foreground: 270 20% 70%;
-    --accent: 275 60% 25%;
-    --accent-foreground: 270 100% 95%;
+    /* Dark Mode - Emerald Futuristic */
+    --background: 160 84% 3%;
+    --foreground: 150 100% 95%;
+    --card: 160 84% 5%;
+    --card-foreground: 150 100% 95%;
+    --popover: 160 84% 5%;
+    --popover-foreground: 150 100% 95%;
+    --primary: 160 84% 45%;
+    --primary-foreground: 150 100% 95%;
+    --secondary: 160 50% 15%;
+    --secondary-foreground: 150 100% 95%;
+    --muted: 160 30% 20%;
+    --muted-foreground: 150 20% 70%;
+    --accent: 155 60% 25%;
+    --accent-foreground: 150 100% 95%;
     --destructive: 0 62% 40%;
-    --destructive-foreground: 270 100% 95%;
-    --border: 266 30% 25%;
-    --input: 266 30% 25%;
-    --ring: 262 100% 60%;
+    --destructive-foreground: 150 100% 95%;
+    --border: 160 30% 25%;
+    --input: 160 30% 25%;
+    --ring: 160 84% 45%;
   }
 }
 
@@ -60,24 +62,24 @@ html, body {
 
 @keyframes neon-pulse {
   0%, 100% { 
-    box-shadow: 0 0 5px 0px theme('colors.purple.500');
+    box-shadow: 0 0 5px 0px theme('colors.emerald.500');
   }
   50% { 
-    box-shadow: 0 0 20px 5px theme('colors.fuchsia.500');
+    box-shadow: 0 0 20px 5px theme('colors.green.500');
   }
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 6px 0 rgba(192, 132, 252, 0.7); }
-  50% { box-shadow: 0 0 10px 2px rgba(192, 132, 252, 0.9); }
+  0%, 100% { box-shadow: 0 0 6px 0 rgba(110, 231, 183, 0.7); }
+  50% { box-shadow: 0 0 10px 2px rgba(110, 231, 183, 0.9); }
 }
 
 @keyframes text-glow {
   0%, 100% { 
-    text-shadow: 0 0 5px theme('colors.purple.400');
+    text-shadow: 0 0 5px theme('colors.emerald.400');
   }
   50% { 
-    text-shadow: 0 0 15px theme('colors.fuchsia.400');
+    text-shadow: 0 0 15px theme('colors.green.400');
   }
 }
 
@@ -110,7 +112,7 @@ html, body {
     @apply bg-background;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-purple-500/30 rounded-full hover:bg-purple-500/50;
+    @apply bg-emerald-500/30 rounded-full hover:bg-emerald-500/50;
   }
 }
 
@@ -197,15 +199,46 @@ html, body {
 
 /* Special gradient text class */
 .gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-fuchsia-500;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 to-green-500;
 }
 
 /* Special border glow effect */
 .border-glow {
-  box-shadow: 0 0 10px theme('colors.purple.500');
+  box-shadow: 0 0 10px theme('colors.emerald.500');
   transition: box-shadow 0.3s ease;
 }
 
 .border-glow:hover {
-  box-shadow: 0 0 20px theme('colors.fuchsia.500');
+  box-shadow: 0 0 20px theme('colors.green.500');
+}
+
+/* Custom button styles */
+.btn-emerald {
+  @apply bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+}
+
+.btn-emerald-outline {
+  @apply border border-emerald-600 text-emerald-600 hover:bg-emerald-600 hover:text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+}
+
+/* Card styles */
+.card-emerald {
+  @apply bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 rounded-lg shadow-sm;
+}
+
+/* Table styles */
+.table-emerald {
+  @apply w-full border-collapse;
+}
+
+.table-emerald th {
+  @apply bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200 font-medium py-3 px-4 text-left;
+}
+
+.table-emerald td {
+  @apply py-3 px-4 border-t border-emerald-100 dark:border-emerald-800/50;
+}
+
+.table-emerald tr {
+  @apply hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors;
 }

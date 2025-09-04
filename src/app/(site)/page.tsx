@@ -1,58 +1,67 @@
 import React from "react";
 import Link from "next/link";
-import { Loader } from "lucide-react";
+import { Cpu, ArrowRight, Server } from "lucide-react";
 
 const TeamLandingPage = () => {
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Header - Neon Accents */}
-      <header className="border-b border-purple-900/30">
+    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+      {/* Header - Minimalista com detalhes verdes */}
+      <header className="border-b border-emerald-900/30">
         <div className="max-w-6xl mx-auto px-4 py-5 flex justify-between items-center">
-          <span className="text-xl font-medium tracking-tighter flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-fuchsia-500">
-            <Loader className="text-fuchsia-400 animate-pulse" />
-            Boas Vindas
+          <span className="text-xl font-medium tracking-tight flex items-center gap-2 text-white">
+            <Server className="text-emerald-400" size={20} />
+            CZONE
           </span>
-          <nav className="flex space-x-6">
+          <nav>
             <Link
               href="/login"
-              className="text-purple-300/80 hover:text-purple-200 transition-all duration-300 text-sm font-light tracking-wider"
+              className="text-emerald-300/80 hover:text-emerald-200 transition-all duration-200 text-sm font-medium flex items-center gap-1"
             >
-              ENTRAR
+              ENTRAR <ArrowRight size={14} />
             </Link>
           </nav>
         </div>
       </header>
 
-      {/* Hero Section - Neon Futuristic */}
+      {/* Hero Section - Estilo verde tech */}
       <main className="flex-grow flex items-center justify-center">
         <div className="max-w-4xl mx-auto px-4 w-full">
           <div className="text-center">
-            <h1 className="text-5xl md:text-7xl font-light tracking-tighter leading-none">
+            <div className="flex justify-center mb-6">
+              <div className="p-3 rounded-full bg-emerald-900/20 border border-emerald-800/30">
+                <Server className="text-emerald-400" size={28} />
+              </div>
+            </div>
+            
+            <h1 className="text-5xl md:text-7xl font-light tracking-tight leading-none">
               PLATAFORMA{" "}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-fuchsia-500 animate-text">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-500">
                 EXCLUSIVA
               </span>
             </h1>
-            <div className="mt-8 max-w-md mx-auto h-px bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
-            <p className="mt-8 text-purple-300/60 text-sm tracking-widest font-light">
+            
+            <div className="mt-8 max-w-md mx-auto h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+            
+            <p className="mt-8 text-emerald-300/70 text-sm tracking-wide font-light">
               ACESSO RESTRITO • GARAPA
             </p>
-            <div className="mt-12 flex justify-center space-x-4">
+            
+            <div className="mt-12 flex justify-center">
               <Link
                 href="/login"
-                className="px-8 py-3.5 border border-purple-500/30 text-sm font-light tracking-wider rounded-sm text-purple-200 hover:bg-purple-900/20 hover:border-purple-400/50 hover:text-white transition-all duration-300 shadow-[0_0_10px_-3px_rgba(192,132,252,0.2)] hover:shadow-[0_0_15px_-3px_rgba(192,132,252,0.3)]"
+                className="px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-green-600 text-sm font-medium tracking-wide rounded text-white hover:from-emerald-500 hover:to-green-500 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-emerald-500/10"
               >
-                ACESSAR CONTA
+                ACESSAR CONTA <ArrowRight size={16} />
               </Link>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Footer - Glow Effect */}
-      <footer className="border-t border-purple-900/30 py-5">
-        <div className="max-w-6xl mx-auto px-4 text-center text-xs text-purple-300/40 tracking-widest">
-          © Claudeniro100% — 2025 • SISTEMA PROTEGIDO
+      {/* Footer - Minimalista com detalhes verdes */}
+      <footer className="border-t border-emerald-900/30 py-5">
+        <div className="max-w-6xl mx-auto px-4 text-center text-xs text-emerald-400/40 tracking-wide">
+          © CZONE — 2025
         </div>
       </footer>
     </div>
