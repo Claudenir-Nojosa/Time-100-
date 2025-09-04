@@ -37,8 +37,9 @@ interface StatusEmpresa {
     cnpj: string;
   };
 }
+export default function OrganogramaPage() {
+  // ← Mude o nome para OrganogramaPage e use export default
 
-export function EmpresasStatusTable() {
   const [data, setData] = useState<StatusEmpresa[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -499,5 +500,3 @@ export function EmpresasStatusTable() {
     </div>
   );
 }
-
-export default EmpresasStatusTable;
