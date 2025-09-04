@@ -189,10 +189,9 @@ export default function PendenciasPage() {
       </div>
 
       {/* Formulário para nova pendência */}
-      <Card className={`mb-8 ${cardBorder} shadow-lg ${cardBg}` }>
+     <Card className="border-emerald-200 dark:border-emerald-900/30 bg-white dark:bg-gray-900">
         <CardHeader>
-          <CardTitle className={`flex items-center gap-2 ${textPrimary}`}>
-            <Plus className="h-5 w-5 text-emerald-500" />
+           <CardTitle className="text-emerald-800 dark:text-emerald-100">
             <span>Nova Pendência</span>
           </CardTitle>
         </CardHeader>
@@ -204,7 +203,7 @@ export default function PendenciasPage() {
               onChange={(e) =>
                 setNovaPendencia({ ...novaPendencia, titulo: e.target.value })
               }
-              className={`${inputBorder} ${inputBg} focus-visible:ring-2 focus-visible:ring-emerald-500`}
+              className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800"
             />
             <Textarea
               placeholder="Descrição (opcional)"
@@ -215,7 +214,7 @@ export default function PendenciasPage() {
                   descricao: e.target.value,
                 })
               }
-              className={`${inputBorder} ${inputBg} focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[100px]`}
+              className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800"
             />
           </div>
         </CardContent>
@@ -251,7 +250,7 @@ export default function PendenciasPage() {
       ) : (
         <div className="space-y-3">
           {pendencias.length === 0 ? (
-            <Card className={`${cardBorder} ${emptyStateBg} shadow-sm`}>
+            <Card className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800">
               <CardContent className="py-12 text-center">
                 <div className="mx-auto max-w-md space-y-4">
                   <Check className="h-12 w-12 mx-auto text-emerald-500 opacity-50" />

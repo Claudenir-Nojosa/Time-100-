@@ -31,7 +31,7 @@ const columns: ColumnDef<Empresa>[] = [
     accessorKey: "razaoSocial",
     header: "Razão Social",
     cell: ({ row }) => (
-      <span className="dark:text-purple-100 text-gray-800 font-medium">
+      <span className="dark:text-emerald-100 text-gray-800 font-medium">
         {row.getValue("razaoSocial")}
       </span>
     ),
@@ -42,7 +42,7 @@ const columns: ColumnDef<Empresa>[] = [
     cell: ({ row }) => {
       const cnpj = row.getValue("cnpj");
       return (
-        <span className="dark:text-purple-200 text-gray-700">
+        <span className="dark:text-emerald-200 text-gray-700">
           {cnpj ? formatCNPJ(cnpj as string) : "-"}
         </span>
       );
@@ -52,7 +52,7 @@ const columns: ColumnDef<Empresa>[] = [
     accessorKey: "uf",
     header: "UF",
     cell: ({ row }) => (
-      <span className="dark:text-purple-200 text-gray-700">
+      <span className="dark:text-emerald-200 text-gray-700">
         {row.getValue("uf")}
       </span>
     ),
@@ -63,7 +63,7 @@ const columns: ColumnDef<Empresa>[] = [
     cell: ({ row }) => {
       const regime = row.getValue("regimeTributacao");
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium dark:bg-purple-900/30 dark:text-purple-300 bg-purple-100 text-purple-800">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium dark:bg-emerald-900/30 dark:text-emerald-300 bg-emerald-100 text-emerald-800">
           {formatRegime(regime as string)}
         </span>
       );
@@ -75,7 +75,7 @@ const columns: ColumnDef<Empresa>[] = [
       return (
         <Link
           href={`/dashboard/empresas/${row.original.id}`}
-          className="dark:text-purple-300 text-purple-600 hover:dark:text-purple-200 hover:text-purple-800 font-medium transition-colors"
+          className="dark:text-emerald-300 text-emerald-600 hover:dark:text-emerald-200 hover:text-emerald-800 font-medium transition-colors"
         >
           Ver detalhes
         </Link>
@@ -124,28 +124,28 @@ export function EmpresasClaudenirTable() {
 
   if (loading) {
     return (
-      <div className="dark:text-purple-300 text-purple-600 text-center py-8 mt-10">
+      <div className="dark:text-emerald-600 text-emerald-600 text-center py-8 mt-10">
         Carregando empresas do Claudenir...
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl overflow-hidden dark:border-purple-900/30 border-gray-200 shadow-sm mt-10">
-      <div className="p-4 dark:bg-purple-700/20 bg-gray-100 border-b dark:border-purple-500/30 border-gray-200">
-        <h2 className="text-xl font-bold items-center text-center">Empresas do Claudenir</h2>
+    <div className="rounded-xl overflow-hidden dark:border-emerald-900/30 border-gray-200 shadow-sm mt-10">
+      <div className="p-4 dark:bg-emerald-700/20 bg-gray-100 border-b dark:border-emerald-500/30 border-gray-200">
+        <h2 className="text-xl font-bold items-center text-center dark:text-emerald-300 text-emerald-800">Empresas do Claudenir</h2>
       </div>
       <Table className="border-collapse">
-        <TableHeader className="dark:bg-purple-950/20 bg-purple-50/30">
+        <TableHeader className="dark:bg-emerald-950/20 bg-emerald-50/30">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow
               key={headerGroup.id}
-              className="dark:border-purple-900/30 border-gray-200"
+              className="dark:border-emerald-900/30 border-gray-200"
             >
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className="dark:text-purple-300 text-purple-600 font-medium py-3 px-4"
+                  className="dark:text-emerald-100 text-emerald-600 font-medium py-3 px-4"
                 >
                   {header.isPlaceholder
                     ? null
@@ -163,7 +163,7 @@ export function EmpresasClaudenirTable() {
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
-                className="dark:border-purple-900/30 border-gray-200 dark:hover:bg-purple-900/10 hover:bg-purple-50/30 transition-colors"
+                className="dark:border-emerald-900/30 border-gray-200 dark:hover:bg-emerald-900/10 hover:bg-emerald-50/30 transition-colors"
                 data-state={row.getIsSelected() && "selected"}
               >
                 {row.getVisibleCells().map((cell) => (
@@ -180,7 +180,7 @@ export function EmpresasClaudenirTable() {
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="h-24 text-center dark:text-purple-300 text-purple-600 dark:bg-gray-950 bg-white"
+                className="h-24 text-center dark:text-emerald-300 text-emerald-600 dark:bg-gray-950 bg-white"
               >
                 Nenhuma empresa cadastrada para o Claudenir
               </TableCell>

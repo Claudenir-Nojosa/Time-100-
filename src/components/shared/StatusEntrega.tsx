@@ -89,7 +89,7 @@ export function StatusEntregaObrigacao({
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Card com estatísticas */}
-        <Card className="border border-gray-200 dark:border-gray-800">
+        <Card className="border border-gray-200 dark:border-emerald-900 dark:bg-gray-950">
           <CardHeader>
             <CardTitle className="text-gray-900 dark:text-gray-100">
               Resumo de Entregas
@@ -138,7 +138,7 @@ export function StatusEntregaObrigacao({
         </Card>
 
         {/* Gráfico de barras */}
-        <Card className="border border-gray-200 dark:border-gray-800">
+        <Card className="border border-gray-200 dark:border-gray-800 dark:border-emerald-900 dark:bg-gray-950">
           <CardHeader>
             <CardTitle className="text-gray-900 dark:text-gray-100">
               Distribuição de Entregas
@@ -201,7 +201,7 @@ export function StatusEntregaObrigacao({
       </div>
 
       {/* Tabela de detalhes */}
-      <Card className="border border-gray-200 dark:border-gray-800">
+      <Card className="border border-gray-200 dark:border-gray-800 dark:border-emerald-900 dark:bg-gray-950">
         <CardHeader>
           <CardTitle className="text-gray-900 dark:text-gray-100">
             Detalhes por Empresa

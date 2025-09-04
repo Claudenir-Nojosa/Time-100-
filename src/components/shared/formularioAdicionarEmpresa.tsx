@@ -447,7 +447,7 @@ export function AdicionarEmpresaForm() {
   };
 
   return (
-    <Card className="max-w-3xl mx-auto">
+    <Card className="max-w-3xl mx-auto dark:bg-gray-950">
       <CardHeader>
         <CardTitle className="text-xl">
           <h1 className="text-2xl font-bold mb-6">Adicionar Nova Empresa</h1>

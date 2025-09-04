@@ -59,9 +59,9 @@ const CATEGORIAS = {
   },
   reuniao: {
     label: "Reunião",
-    cor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    cor: "bg-cyan-100 text-cyan-800 border-cyan-200",
     corConcluida: "bg-green-100 text-green-800 border-green-200",
-    corEscura: "bg-emerald-500",
+    corEscura: "bg-cyan-500",
   },
   diagnostico: {
     label: "Diagnóstico",
@@ -742,7 +742,7 @@ export default function CalendarioPage() {
             <div
               className={`w-3 h-3 rounded-full ${categoria.corEscura}`}
             ></div>
-            <span className="text-sm dark:text-emerald-200">
+            <span className="text-sm dark:text-emerald-100">
               {categoria.label}
             </span>
           </div>
@@ -751,7 +751,7 @@ export default function CalendarioPage() {
         {/* Concluído */}
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-green-500"></div>
-          <span className="text-sm dark:text-emerald-200">Concluído</span>
+          <span className="text-sm dark:text-emerald-100">Concluído</span>
         </div>
       </div>
 
