@@ -5,9 +5,10 @@ import db from "@/lib/db";
 export async function GET() {
   try {
     const atividades = await db.atividade.findMany({
-      orderBy: {
-        data: "asc",
-      },
+      orderBy: [
+        { data: "asc" },
+        { ordem: "asc" }, // ← Adicione ordenação por ordem
+      ],
       select: {
         id: true,
         nome: true,
@@ -17,7 +18,8 @@ export async function GET() {
         responsavelImg: true,
         data: true,
         concluida: true,
-        categoria: true, // ← Adicione esta linha
+        categoria: true,
+        ordem: true, // ← Adicione este campo
         createdAt: true,
         updatedAt: true,
       },
@@ -35,7 +37,52 @@ export async function GET() {
   }
 }
 
-// POST nova atividade
+// PUT atualizar atividade
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const { nome, horario, responsavel, data, concluida, categoria, ordem } =
+      await request.json();
+
+    const atividade = await db.atividade.update({
+      where: { id },
+      data: {
+        nome,
+        horario,
+        responsavel,
+        data: new Date(data),
+        concluida,
+        categoria,
+        ordem, // ← Adicione este campo
+      },
+      select: {
+        id: true,
+        nome: true,
+        horario: true,
+        responsavel: true,
+        responsavelId: true,
+        responsavelImg: true,
+        data: true,
+        concluida: true,
+        categoria: true,
+        ordem: true, // ← Adicione este campo
+      },
+    });
+
+    return NextResponse.json(atividade);
+  } catch (error) {
+    console.error("Erro ao atualizar atividade:", error);
+    return NextResponse.json(
+      { error: "Erro ao atualizar atividade" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST nova atividade (mantido igual)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -69,7 +116,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Data inválida" }, { status: 400 });
     }
 
-    // Cria a atividade com todos os campos
+    // Encontrar a maior ordem atual para esta data e responsável
+    const atividadesDoDia = await db.atividade.findMany({
+      where: {
+        data: dataAtividade,
+        responsavelId: body.responsavelId,
+      },
+      orderBy: { ordem: "desc" },
+    });
+
+    // Calcular a nova ordem (última ordem + 1, ou 0 se for a primeira)
+    const novaOrdem =
+      atividadesDoDia.length > 0 ? (atividadesDoDia[0].ordem || 0) + 1 : 0;
+
+    // Cria a atividade com todos os campos incluindo a ordem
     const atividade = await db.atividade.create({
       data: {
         nome: body.nome,
@@ -79,7 +139,8 @@ export async function POST(request: Request) {
         responsavelImg: body.responsavelImg || null,
         data: dataAtividade,
         concluida: body.concluida || false,
-        categoria: body.categoria || "apuracao", // ← Adicione esta linha
+        categoria: body.categoria || "apuracao",
+        ordem: novaOrdem,
       },
       select: {
         id: true,
@@ -90,7 +151,8 @@ export async function POST(request: Request) {
         responsavelImg: true,
         data: true,
         concluida: true,
-        categoria: true, // ← Adicione esta linha
+        categoria: true,
+        ordem: true,
       },
     });
 

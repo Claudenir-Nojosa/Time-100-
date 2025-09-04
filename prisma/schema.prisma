@@ -180,7 +180,8 @@ model Atividade {
   responsavelImg String?
   data           DateTime
   concluida      Boolean  @default(false)
-  categoria      String   @default("apuracao") // ← Adicione este campo
+  categoria      String   @default("apuracao")
+  ordem          Int?     @default(0) // ← ADICIONE ESTE CAMPO
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

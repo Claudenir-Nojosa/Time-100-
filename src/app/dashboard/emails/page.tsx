@@ -1,7 +1,7 @@
 // app/dashboard/emails/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,13 +60,14 @@ type DadosApuracao = {
 };
 
 export default function EmailsPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [empresaSelecionada, setEmpresaSelecionada] = useState<string>("");
   const [dadosApuracao, setDadosApuracao] = useState<DadosApuracao[]>([]);
   const [analise, setAnalise] = useState<string>("");
   const [carregandoAnalise, setCarregandoAnalise] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [empresasCarregadas, setEmpresasCarregadas] = useState<boolean>(false);
 
   // Meses para os inputs
   const meses = [
@@ -75,28 +76,32 @@ export default function EmailsPage() {
     { value: "outubro", label: "Outubro/2023" },
   ];
 
-  useEffect(() => {
-    const fetchEmpresas = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/empresas?responsavel=CLAUDENIR");
-        if (!response.ok) {
-          throw new Error("Erro ao buscar empresas");
-        }
-        const empresasData = await response.json();
-        setEmpresas(empresasData);
-      } catch (error) {
-        console.error("Erro ao buscar empresas:", error);
-        toast.error("Erro ao carregar empresas");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Buscar empresas apenas uma vez quando a sessão estiver carregada
+  const fetchEmpresas = useCallback(async () => {
+    if (empresasCarregadas || !session?.user) return;
 
-    if (session?.user) {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/empresas?responsavel=CLAUDENIR");
+      if (!response.ok) {
+        throw new Error("Erro ao buscar empresas");
+      }
+      const empresasData = await response.json();
+      setEmpresas(empresasData);
+      setEmpresasCarregadas(true);
+    } catch (error) {
+      console.error("Erro ao buscar empresas:", error);
+      toast.error("Erro ao carregar empresas");
+    } finally {
+      setLoading(false);
+    }
+  }, [session, empresasCarregadas]);
+
+  useEffect(() => {
+    if (status === "authenticated" && !empresasCarregadas) {
       fetchEmpresas();
     }
-  }, [session]);
+  }, [status, empresasCarregadas, fetchEmpresas]);
 
   const handleInputChange = (
     mesIndex: number,
@@ -128,6 +133,16 @@ export default function EmailsPage() {
     }
 
     setDadosApuracao(novosDados);
+  };
+
+  const formatarRegimeTributario = (regime: string): string => {
+    const formatacoes: { [key: string]: string } = {
+      SIMPLES_NACIONAL: "Simples Nacional",
+      LUCRO_PRESUMIDO: "Lucro Presumido",
+      LUCRO_REAL: "Lucro Real",
+    };
+
+    return formatacoes[regime.toUpperCase()] || regime;
   };
 
   const getTipoRegime = (regime: string): "simples" | "presumido" | "real" => {
@@ -255,7 +270,7 @@ ${dadosApuracao
   .join("\n")}
 
 ### Recomendações
-1. Considerando o regime tributário (${empresa.regimeTributacao}), avalie a possibilidade de aproveitar créditos fiscais.
+1. Considerando o regime tributário (${formatarRegimeTributario(empresa.regimeTributacao)}), avalie a possibilidade de aproveitar créditos fiscais.
 2. O percentual de impostos sobre o faturamento está em ${((dadosApuracao.reduce((acc, curr) => acc + (curr.impostos.simples || curr.impostos.icms || 0), 0) / dadosApuracao.reduce((acc, curr) => acc + curr.totalVendas, 0)) * 100).toFixed(2)}%, o que está dentro da média para o segmento.
 3. Recomendamos uma revisão dos lançamentos fiscais para garantir que todos os créditos estão sendo devidamente aproveitados.
 
@@ -323,7 +338,8 @@ Sugerimos agendar uma reunião para discutir oportunidades de otimização tribu
                     <SelectContent>
                       {empresas.map((empresa) => (
                         <SelectItem key={empresa.id} value={empresa.id}>
-                          {empresa.razaoSocial} - {empresa.regimeTributacao}
+                          {empresa.razaoSocial} -{" "}
+                          {formatarRegimeTributario(empresa.regimeTributacao)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -334,7 +350,7 @@ Sugerimos agendar uma reunião para discutir oportunidades de otimização tribu
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
                       <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100">
-                        {empresa.regimeTributacao}
+                        {formatarRegimeTributario(empresa.regimeTributacao)}
                       </Badge>
                       <Badge
                         variant="outline"

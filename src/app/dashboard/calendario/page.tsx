@@ -8,6 +8,7 @@ import {
   Pencil,
   Plus,
   X,
+  GripVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,7 @@ interface Atividade {
   data: Date;
   concluida: boolean;
   categoria: "apuracao" | "reuniao" | "diagnostico" | "outros";
+  ordem?: number;
 }
 
 // Configuração das categorias
@@ -87,9 +89,13 @@ export default function CalendarioPage() {
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
+  const [dragOverAtividade, setDragOverAtividade] = useState<string | null>(
+    null
+  );
   const [draggedAtividade, setDraggedAtividade] = useState<Atividade | null>(
     null
   );
+  const [isReordering, setIsReordering] = useState<boolean>(false);
   const [atividadeParaExcluir, setAtividadeParaExcluir] = useState<
     string | null
   >(null);
@@ -113,7 +119,25 @@ export default function CalendarioPage() {
   const [filtroConcluidas, setFiltroConcluidas] = useState<boolean>(true);
   const [openFiltroPopover, setOpenFiltroPopover] = useState(false);
 
-  // 2. Agora os effects
+  // Cleanup effect para remover classes de drag
+  useEffect(() => {
+    if (!isReordering) {
+      // Remove todas as classes de estilo de drag quando não estiver reordenando
+      document
+        .querySelectorAll(
+          ".opacity-50, .border-2, .border-emerald-400, .scale-105"
+        )
+        .forEach((el) => {
+          el.classList.remove(
+            "opacity-50",
+            "border-2",
+            "border-emerald-400",
+            "scale-105"
+          );
+        });
+    }
+  }, [isReordering]);
+
   useEffect(() => {
     if (session.status === "unauthenticated") {
       router.push("/login");
@@ -129,8 +153,8 @@ export default function CalendarioPage() {
         setAtividades(
           data.map((a: any) => ({
             ...a,
-            data: new Date(a.data), // Conversão explícita para Date
-            categoria: a.categoria || "apuracao", // Valor padrão para categorias antigas
+            data: new Date(a.data),
+            categoria: a.categoria || "apuracao",
           }))
         );
       } catch (error) {
@@ -145,7 +169,6 @@ export default function CalendarioPage() {
     }
   }, [session.status]);
 
-  // 3. Condicionais de renderização só depois de todos os hooks
   if (session.status === "loading") {
     return <div>Carregando...</div>;
   }
@@ -154,18 +177,12 @@ export default function CalendarioPage() {
     return null;
   }
 
-  // Função para filtrar atividades
   const atividadesFiltradas = atividades.filter((atividade) => {
-    // Filtro por categoria
     const categoriaFiltrada = filtros[atividade.categoria];
-
-    // Filtro por concluídas
     const concluidaFiltrada = filtroConcluidas ? true : !atividade.concluida;
-
     return categoriaFiltrada && concluidaFiltrada;
   });
 
-  // Função para obter atividades do dia já filtradas
   const getAtividadesDoDia = (date: Date) => {
     return atividadesFiltradas.filter((atividade) => {
       const atividadeDate = new Date(atividade.data);
@@ -194,19 +211,22 @@ export default function CalendarioPage() {
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove("bg-emerald-100", "dark:bg-emerald-900/20");
+    e.currentTarget.classList.remove(
+      "bg-emerald-100",
+      "dark:bg-emerald-900/20"
+    );
   };
 
   const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
     e.preventDefault();
-    e.currentTarget.classList.remove("bg-emerald-100", "dark:bg-emerald-900/20");
+    e.currentTarget.classList.remove(
+      "bg-emerald-100",
+      "dark:bg-emerald-900/20"
+    );
 
     if (!draggedAtividade) return;
 
-    // Garante que a data da atividade seja um objeto Date
     const draggedDate = new Date(draggedAtividade.data);
-
-    // Verifica se a data é diferente
     if (
       draggedDate.getDate() === targetDate.getDate() &&
       draggedDate.getMonth() === targetDate.getMonth() &&
@@ -216,24 +236,17 @@ export default function CalendarioPage() {
     }
 
     try {
-      // Atualiza no banco de dados
       const updatedAtividade = await updateAtividadeDate(
         draggedAtividade.id,
         targetDate
       );
-
-      // Atualiza no estado local
       setAtividades(
         atividades.map((a) =>
           a.id === draggedAtividade.id
-            ? {
-                ...updatedAtividade,
-                data: new Date(updatedAtividade.data), // Garante que a data atualizada também seja Date
-              }
+            ? { ...updatedAtividade, data: new Date(updatedAtividade.data) }
             : a
         )
       );
-
       toast.success(
         `Atividade movida para ${targetDate.toLocaleDateString("pt-BR")}`
       );
@@ -246,38 +259,21 @@ export default function CalendarioPage() {
   const updateAtividadeDate = async (id: string, newDate: Date) => {
     const response = await fetch(`/api/atividades/${id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        data: newDate.toISOString(),
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: newDate.toISOString() }),
     });
 
-    if (!response.ok) {
-      throw new Error("Falha ao atualizar atividade");
-    }
-
-    const result = await response.json();
-    return {
-      ...result,
-      data: new Date(result.data), // Conversão explícita
-    };
+    if (!response.ok) throw new Error("Falha ao atualizar atividade");
+    return await response.json();
   };
 
   const handleToggleConcluida = async (atividade: Atividade) => {
     try {
       const res = await fetch(`/api/atividades/${atividade.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...atividade,
-          concluida: !atividade.concluida,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...atividade, concluida: !atividade.concluida }),
       });
-
       const atividadeAtualizada = await res.json();
       setAtividades(
         atividades.map((a) => (a.id === atividade.id ? atividadeAtualizada : a))
@@ -310,7 +306,6 @@ export default function CalendarioPage() {
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-
   const firstDayOfMonth = new Date(year, month, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0);
   const daysInMonth = lastDayOfMonth.getDate();
@@ -318,7 +313,6 @@ export default function CalendarioPage() {
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
-
   const isWeekend = (dayIndex: number) => dayIndex === 0 || dayIndex === 6;
 
   const handleEditAtividade = (atividade: Atividade) => {
@@ -334,7 +328,7 @@ export default function CalendarioPage() {
   };
 
   const handleOpenDialog = (date: Date) => {
-    setAtividadeParaEditar(null); // Limpa edição anterior
+    setAtividadeParaEditar(null);
     setNovaAtividade({
       nome: "",
       horario: "",
@@ -347,7 +341,6 @@ export default function CalendarioPage() {
 
   const handleDeleteAtividade = async () => {
     if (!atividadeParaExcluir) return;
-
     const atividade = atividades.find((a) => a.id === atividadeParaExcluir);
     const atividadeNome = atividade?.nome || "Atividade";
 
@@ -355,7 +348,6 @@ export default function CalendarioPage() {
       const deletePromise = fetch(`/api/atividades/${atividadeParaExcluir}`, {
         method: "DELETE",
       });
-
       toast.promise(deletePromise, {
         loading: `Excluindo "${atividadeNome}"...`,
         success: () => {
@@ -376,13 +368,10 @@ export default function CalendarioPage() {
 
   const handleUpdateAtividade = async () => {
     if (!atividadeParaEditar || !novaAtividade.nome) return;
-
     try {
       const updatePromise = fetch(`/api/atividades/${atividadeParaEditar.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...novaAtividade,
           data: selectedDate?.toISOString(),
@@ -417,13 +406,10 @@ export default function CalendarioPage() {
 
   const handleAddAtividade = async () => {
     if (!selectedDate || !novaAtividade.nome) return;
-
     try {
       const createPromise = fetch("/api/atividades", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...novaAtividade,
           responsavelId: session.data?.user.id,
@@ -453,11 +439,222 @@ export default function CalendarioPage() {
     }
   };
 
+  const reordenarAtividades = async (
+    atividadeId: string,
+    novaOrdem: number,
+    data: Date
+  ) => {
+    try {
+      const response = await fetch(`/api/atividades/${atividadeId}/reordenar`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ordem: novaOrdem, data: data.toISOString() }),
+      });
+
+      if (!response.ok) throw new Error("Falha ao reordenar atividade");
+      const atividadeAtualizada = await response.json();
+      setAtividades((prev) =>
+        prev.map((a) => (a.id === atividadeId ? { ...a, ordem: novaOrdem } : a))
+      );
+      return atividadeAtualizada;
+    } catch (error) {
+      console.error("Erro ao reordenar atividade:", error);
+      throw error;
+    }
+  };
+
+  // Handlers para drag and drop vertical
+  const handleVerticalDragStart = (
+    e: React.DragEvent,
+    atividade: Atividade
+  ) => {
+    e.dataTransfer.setData("text/plain", atividade.id);
+    setDraggedAtividade(atividade);
+    setIsReordering(true);
+    e.currentTarget.classList.add("opacity-50");
+  };
+
+  const handleVerticalDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove("opacity-50");
+    setIsReordering(false);
+    setDragOverAtividade(null);
+  };
+
+  const handleVerticalDragOver = (e: React.DragEvent, atividadeId: string) => {
+    e.preventDefault();
+    setDragOverAtividade(atividadeId);
+    e.currentTarget.classList.add("border-2", "border-emerald-400");
+  };
+
+  const handleVerticalDragLeave = (e: React.DragEvent) => {
+    setDragOverAtividade(null);
+    e.currentTarget.classList.remove("border-2", "border-emerald-400");
+  };
+
+  const handleVerticalDrop = async (
+    e: React.DragEvent,
+    targetAtividadeId: string,
+    date: Date
+  ) => {
+    e.preventDefault();
+    setIsReordering(false);
+    setDragOverAtividade(null);
+
+    // Limpa todas as classes de estilo
+    document
+      .querySelectorAll(".opacity-50, .border-2, .border-emerald-400")
+      .forEach((el) => {
+        el.classList.remove("opacity-50", "border-2", "border-emerald-400");
+      });
+
+    if (!draggedAtividade || draggedAtividade.id === targetAtividadeId) return;
+
+    try {
+      const atividadesDoDia = atividades
+        .filter((a) => {
+          const atividadeDate = new Date(a.data);
+          return (
+            atividadeDate.getDate() === date.getDate() &&
+            atividadeDate.getMonth() === date.getMonth() &&
+            atividadeDate.getFullYear() === date.getFullYear()
+          );
+        })
+        .sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+
+      const targetIndex = atividadesDoDia.findIndex(
+        (a) => a.id === targetAtividadeId
+      );
+      const draggedIndex = atividadesDoDia.findIndex(
+        (a) => a.id === draggedAtividade.id
+      );
+
+      if (targetIndex === -1 || draggedIndex === -1) return;
+
+      const novasAtividades = [...atividadesDoDia];
+      const [removed] = novasAtividades.splice(draggedIndex, 1);
+      novasAtividades.splice(targetIndex, 0, removed);
+
+      const atividadesAtualizadas = await Promise.all(
+        novasAtividades.map(async (atividade, index) => {
+          if (atividade.ordem !== index) {
+            return await reordenarAtividades(atividade.id, index, date);
+          }
+          return atividade;
+        })
+      );
+
+      setAtividades((prev) =>
+        prev.map((a) => {
+          const updated = atividadesAtualizadas.find((ua) => ua.id === a.id);
+          return updated || a;
+        })
+      );
+
+      toast.success("Ordem das atividades atualizada!");
+    } catch (error) {
+      toast.error("Erro ao reordenar atividades");
+      console.error("Erro ao reordenar:", error);
+    }
+  };
+
+  const renderAtividadesDoDia = (
+    atividadesDoDia: Atividade[],
+    currentDay: Date
+  ) => {
+    const atividadesOrdenadas = [...atividadesDoDia].sort(
+      (a, b) => (a.ordem || 0) - (b.ordem || 0)
+    );
+
+    return atividadesOrdenadas.map((atividade) => {
+      const categoriaConfig = CATEGORIAS[atividade.categoria];
+      const estilo = atividade.concluida
+        ? categoriaConfig.corConcluida
+        : categoriaConfig.cor;
+
+      return (
+        <div
+          key={atividade.id}
+          className={`text-xs p-1.5 rounded cursor-pointer relative group border ${estilo}
+            hover:shadow-sm transition-all transform hover:scale-[1.02]
+            ${dragOverAtividade === atividade.id ? "border-2 border-emerald-400 scale-105" : ""}
+            ${draggedAtividade?.id === atividade.id ? "opacity-50" : ""}`}
+          onClick={() => handleToggleConcluida(atividade)}
+          draggable
+          onDragStart={(e) => handleVerticalDragStart(e, atividade)}
+          onDragEnd={handleVerticalDragEnd}
+          onDragOver={(e) => handleVerticalDragOver(e, atividade.id)}
+          onDragLeave={handleVerticalDragLeave}
+          onDrop={(e) => handleVerticalDrop(e, atividade.id, currentDay)}
+        >
+          <div className="absolute left-1 top-1/2 transform -translate-y-1/2 cursor-grab active:cursor-grabbing">
+            <GripVertical className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100" />
+          </div>
+
+          <div className="flex justify-between items-start gap-2 ml-4">
+            <div className="flex items-start gap-2 flex-1 min-w-0">
+              <Avatar className="h-5 w-5 flex-shrink-0 mt-0.5">
+                <AvatarImage
+                  src={atividade.responsavelImg || ""}
+                  alt={atividade.responsavel}
+                  className="object-cover"
+                />
+                <AvatarFallback className="text-xs bg-gray-100">
+                  {atividade.responsavel
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="flex flex-col min-w-0">
+                {atividade.horario && (
+                  <span className="font-medium text-xs whitespace-nowrap">
+                    {atividade.horario}
+                  </span>
+                )}
+                <span className="text-xs break-words whitespace-normal">
+                  {atividade.nome}
+                </span>
+                <span className="text-[10px] opacity-70 mt-0.5">
+                  {CATEGORIAS[atividade.categoria].label}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-shrink-0">
+              <button
+                className="text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded-full p-0.5 ml-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditAtividade(atividade);
+                }}
+                title="Editar atividade"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+              <button
+                className="text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded-full p-0.5 ml-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  confirmDelete(atividade.id);
+                }}
+                title="Excluir atividade"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    });
+  };
+
   const renderDays = () => {
     const days = [];
     let day = 1;
 
-    // Dias do mês anterior
     for (let i = 0; i < startingDayOfWeek; i++) {
       const prevDate = new Date(year, month, 0 - (startingDayOfWeek - i - 1));
       const dayIndex = i % 7;
@@ -477,7 +674,6 @@ export default function CalendarioPage() {
       );
     }
 
-    // Dias do mês atual
     for (let i = 1; i <= daysInMonth; i++) {
       const currentDay = new Date(year, month, i);
       const dayIndex = currentDay.getDay();
@@ -488,16 +684,8 @@ export default function CalendarioPage() {
         <div
           key={`day-${i}`}
           className={`min-h-40 p-2 border dark:border-emerald-900/40 transition-all flex flex-col
-            ${
-              isToday
-                ? "dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-600"
-                : ""
-            }
-            ${
-              isWeekend(dayIndex)
-                ? "dark:bg-gray-900 bg-emerald-50/30"
-                : "dark:bg-gray-950 bg-white"
-            }`}
+            ${isToday ? "dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-600" : ""}
+            ${isWeekend(dayIndex) ? "dark:bg-gray-900 bg-emerald-50/30" : "dark:bg-gray-950 bg-white"}`}
           onDragOver={(e) => handleDragOver(e, currentDay)}
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, currentDay)}
@@ -507,7 +695,7 @@ export default function CalendarioPage() {
               className={`text-sm font-medium ${
                 isToday
                   ? "bg-gradient-to-br from-emerald-500 via-emerald-600 to-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-[0_0_6px_0_rgba(192,132,252,0.7)]"
-                  : "dark:text-emerald-100 text-gray-800 "
+                  : "dark:text-emerald-100 text-gray-800"
               }`}
             >
               {i}
@@ -520,94 +708,12 @@ export default function CalendarioPage() {
             </button>
           </div>
           <div className="mt-1 flex-1 space-y-1 overflow-y-auto">
-            {atividadesDoDia.map((atividade) => {
-              const categoriaConfig = CATEGORIAS[atividade.categoria];
-              const estilo = atividade.concluida
-                ? categoriaConfig.corConcluida
-                : categoriaConfig.cor;
-
-              return (
-                <div
-                  key={atividade.id}
-                  className={`text-xs p-1.5 rounded cursor-pointer relative group border ${estilo}
-                    hover:shadow-sm transition-shadow`}
-                  onClick={() => handleToggleConcluida(atividade)}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, atividade)}
-                  onDragEnd={handleDragEnd}
-                >
-                  {/* Indicador de categoria */}
-                  <div
-                    className={`w-2 h-2 rounded-full ${CATEGORIAS[atividade.categoria].corEscura} absolute top-1 right-1`}
-                  ></div>
-
-                  <div className="flex justify-between items-start gap-2">
-                    {/* Avatar + Informações da atividade */}
-                    <div className="flex items-start gap-2 flex-1 min-w-0">
-                      <Avatar className="h-5 w-5 flex-shrink-0 mt-0.5">
-                        <AvatarImage
-                          src={atividade.responsavelImg || ""}
-                          alt={atividade.responsavel}
-                          className="object-cover"
-                        />
-                        <AvatarFallback className="text-xs bg-gray-100">
-                          {atividade.responsavel
-                            .split(" ")
-                            .slice(0, 2)
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="flex flex-col min-w-0">
-                        {atividade.horario && (
-                          <span className="font-medium text-xs whitespace-nowrap">
-                            {atividade.horario}
-                          </span>
-                        )}
-                        <span className="text-xs break-words whitespace-normal">
-                          {atividade.nome}
-                        </span>
-                        <span className="text-[10px] opacity-70 mt-0.5">
-                          {CATEGORIAS[atividade.categoria].label}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Botões de ação (aparecem no hover) */}
-                    <div className="flex flex-shrink-0">
-                      <button
-                        className="text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded-full p-0.5 ml-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditAtividade(atividade);
-                        }}
-                        title="Editar atividade"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                      <button
-                        className="text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded-full p-0.5 ml-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          confirmDelete(atividade.id);
-                        }}
-                        title="Excluir atividade"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {renderAtividadesDoDia(atividadesDoDia, currentDay)}
           </div>
         </div>
       );
     }
 
-    // Dias do próximo mês
     const totalCells = startingDayOfWeek + daysInMonth;
     const remainingCells = totalCells > 35 ? 42 - totalCells : 35 - totalCells;
 
@@ -635,7 +741,7 @@ export default function CalendarioPage() {
 
     return days;
   };
-
+  
   return (
     <div className="container mx-auto py-8 px-4 mt-10">
       {/* Cabeçalho */}
@@ -675,7 +781,7 @@ export default function CalendarioPage() {
                         />
                         <Label
                           htmlFor={`filter-${key}`}
-                          className="text-sm font-normal dark:text-emerald-200"
+                          className="text-sm font-normal dark:text-emerald-100"
                         >
                           <div className="flex items-center gap-2">
                             <div
@@ -731,8 +837,6 @@ export default function CalendarioPage() {
           </Button>
         </div>
       </div>
-
-
 
       {/* Legenda de categorias */}
       <div className="flex flex-wrap gap-4 mb-6 p-4 dark:bg-emerald-950/10 bg-white rounded-lg border dark:border-emerald-900/30 border-gray-200">
@@ -796,7 +900,10 @@ export default function CalendarioPage() {
 
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="nome" className="text-right dark:text-emerald-200">
+              <label
+                htmlFor="nome"
+                className="text-right dark:text-emerald-200"
+              >
                 Nome:
               </label>
               <Input
@@ -889,7 +996,10 @@ export default function CalendarioPage() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="data" className="text-right dark:text-emerald-200">
+              <label
+                htmlFor="data"
+                className="text-right dark:text-emerald-200"
+              >
                 Data:
               </label>
               <Input
