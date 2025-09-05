@@ -575,9 +575,9 @@ export default function CalendarioPage() {
         <div
           key={atividade.id}
           className={`text-xs p-1.5 rounded cursor-pointer relative group border ${estilo}
-            hover:shadow-sm transition-all transform hover:scale-[1.02]
-            ${dragOverAtividade === atividade.id ? "border-2 border-emerald-400 scale-105" : ""}
-            ${draggedAtividade?.id === atividade.id ? "opacity-50" : ""}`}
+  hover:shadow-md transition-all
+  ${dragOverAtividade === atividade.id ? "border-2 border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20" : ""}
+  ${draggedAtividade?.id === atividade.id ? "opacity-50" : ""}`}
           onClick={() => handleToggleConcluida(atividade)}
           draggable
           onDragStart={(e) => handleVerticalDragStart(e, atividade)}
@@ -741,7 +741,7 @@ export default function CalendarioPage() {
 
     return days;
   };
-  
+
   return (
     <div className="container mx-auto py-8 px-4 mt-10">
       {/* Cabeçalho */}
