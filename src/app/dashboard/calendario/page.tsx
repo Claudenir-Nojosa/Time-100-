@@ -125,14 +125,16 @@ export default function CalendarioPage() {
       // Remove todas as classes de estilo de drag quando não estiver reordenando
       document
         .querySelectorAll(
-          ".opacity-50, .border-2, .border-emerald-400, .scale-105"
+          ".opacity-50, .border-2, .border-emerald-400, .scale-105, .bg-emerald-100, .dark\\:bg-emerald-900\\/20"
         )
         .forEach((el) => {
           el.classList.remove(
             "opacity-50",
             "border-2",
             "border-emerald-400",
-            "scale-105"
+            "scale-105",
+            "bg-emerald-100",
+            "dark:bg-emerald-900/20"
           );
         });
     }
@@ -198,31 +200,61 @@ export default function CalendarioPage() {
   const handleDragStart = (e: React.DragEvent, atividade: Atividade) => {
     e.dataTransfer.setData("text/plain", atividade.id);
     setDraggedAtividade(atividade);
-    e.currentTarget.classList.add("opacity-50");
+    // Aplica estilo visual mínimo apenas no elemento sendo arrastado
+    e.currentTarget.classList.add("opacity-70");
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove("opacity-50");
+    // Remove todos os estilos de drag de TODOS os elementos
+    document.querySelectorAll(".day-cell").forEach((cell) => {
+      cell.classList.remove(
+        "bg-emerald-100",
+        "dark:bg-emerald-900/20",
+        "border-emerald-300",
+        "border-2"
+      );
+    });
+
+    // Remove estilo do elemento arrastado
+    e.currentTarget.classList.remove("opacity-70");
   };
 
   const handleDragOver = (e: React.DragEvent, date: Date) => {
     e.preventDefault();
-    e.currentTarget.classList.add("bg-emerald-100", "dark:bg-emerald-900/20");
+    // Remove qualquer destaque anterior de TODAS as células
+    document.querySelectorAll(".day-cell").forEach((cell) => {
+      cell.classList.remove(
+        "bg-emerald-100",
+        "dark:bg-emerald-900/20",
+        "border-emerald-300",
+        "border-2"
+      );
+    });
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    // Remove qualquer destaque ao sair da célula
     e.currentTarget.classList.remove(
       "bg-emerald-100",
-      "dark:bg-emerald-900/20"
+      "dark:bg-emerald-900/20",
+      "border-emerald-300",
+      "border-2"
     );
   };
 
   const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
     e.preventDefault();
-    e.currentTarget.classList.remove(
-      "bg-emerald-100",
-      "dark:bg-emerald-900/20"
-    );
+
+    // Remove qualquer destaque imediatamente
+    document.querySelectorAll(".day-cell").forEach((cell) => {
+      cell.classList.remove(
+        "bg-emerald-100",
+        "dark:bg-emerald-900/20",
+        "border-emerald-300",
+        "border-2"
+      );
+    });
 
     if (!draggedAtividade) return;
 
@@ -471,7 +503,6 @@ export default function CalendarioPage() {
     e.dataTransfer.setData("text/plain", atividade.id);
     setDraggedAtividade(atividade);
     setIsReordering(true);
-    e.currentTarget.classList.add("opacity-50");
   };
 
   const handleVerticalDragEnd = (e: React.DragEvent) => {
@@ -577,7 +608,7 @@ export default function CalendarioPage() {
           className={`text-xs p-1.5 rounded cursor-pointer relative group border ${estilo}
   hover:shadow-md transition-all
   ${dragOverAtividade === atividade.id ? "border-2 border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20" : ""}
-  ${draggedAtividade?.id === atividade.id ? "opacity-50" : ""}`}
+  ${draggedAtividade?.id === atividade.id ? "" : ""}`}
           onClick={() => handleToggleConcluida(atividade)}
           draggable
           onDragStart={(e) => handleVerticalDragStart(e, atividade)}
@@ -587,7 +618,7 @@ export default function CalendarioPage() {
           onDrop={(e) => handleVerticalDrop(e, atividade.id, currentDay)}
         >
           <div className="absolute left-1 top-1/2 transform -translate-y-1/2 cursor-grab active:cursor-grabbing">
-            <GripVertical className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100" />
+            <GripVertical className="h-3 w-3 text-gray-400 " />
           </div>
 
           <div className="flex justify-between items-start gap-2 ml-4">
@@ -617,7 +648,7 @@ export default function CalendarioPage() {
                 <span className="text-xs break-words whitespace-normal">
                   {atividade.nome}
                 </span>
-                <span className="text-[10px] opacity-70 mt-0.5">
+                <span className="text-[10px]  mt-0.5">
                   {CATEGORIAS[atividade.categoria].label}
                 </span>
               </div>
@@ -683,9 +714,9 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`day-${i}`}
-          className={`min-h-40 p-2 border dark:border-emerald-900/40 transition-all flex flex-col
-            ${isToday ? "dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-600" : ""}
-            ${isWeekend(dayIndex) ? "dark:bg-gray-900 bg-emerald-50/30" : "dark:bg-gray-950 bg-white"}`}
+          className={`day-cell min-h-40 p-2 border dark:border-emerald-900/40 transition-all flex flex-col
+          ${isToday ? "dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-600" : ""}
+          ${isWeekend(dayIndex) ? "dark:bg-gray-900 bg-emerald-50/30" : "dark:bg-gray-950 bg-white"}`}
           onDragOver={(e) => handleDragOver(e, currentDay)}
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, currentDay)}
