@@ -287,3 +287,48 @@ body {
   outline: none !important;
   box-shadow: none !important;
 }
+
+/* Estilos para o editor de texto rico */
+.editor-rich-text h1 {
+  font-size: 1.875rem !important;
+  line-height: 2.25rem !important;
+  font-weight: 700 !important;
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
+  color: #1f2937 !important;
+}
+
+.editor-rich-text h2 {
+  font-size: 1.5rem !important;
+  line-height: 2rem !important;
+  font-weight: 700 !important;
+  margin-top: 0.75rem !important;
+  margin-bottom: 0.75rem !important;
+  color: #374151 !important;
+}
+
+.editor-rich-text h3 {
+  font-size: 1.25rem !important;
+  line-height: 1.75rem !important;
+  font-weight: 600 !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  color: #4b5563 !important;
+}
+
+.editor-rich-text p {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  color: #f7f7f7 !important;
+}
+
+.editor-rich-text ul, .editor-rich-text ol {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-left: 1.5rem !important;
+}
+
+.editor-rich-text li {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}

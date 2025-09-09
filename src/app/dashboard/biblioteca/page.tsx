@@ -1,13 +1,14 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { EditorRichText } from "@/components/shared/editorRichText";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,19 @@ import {
   FileText,
   Save,
   Edit,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Type,
+  Heading1,
+  Heading2,
+  Heading3,
+  Trash2,
 } from "lucide-react";
 
 // Definição da interface para BaseLegal
@@ -466,7 +480,6 @@ export default function BibliotecaPage() {
   );
 }
 
-// Componente para o botão de anotações
 function AnotacoesButton({
   baseLegal,
   session,
@@ -511,31 +524,62 @@ function AnotacoesButton({
     }
   };
 
+  // No componente AnotacoesButton
   const salvarAnotacao = async () => {
+    const html = conteudo || "";
+
     try {
-      const method = anotacao ? "PUT" : "POST";
-      const url = anotacao ? `/api/anotacoes/${anotacao.id}` : "/api/anotacoes";
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          conteudo,
-          baseLegalId: baseLegal.id,
-          usuarioId: session.user.id,
-        }),
-      });
-
-      if (response.ok) {
-        setEditando(false);
-        carregarAnotacao(); // Recarregar a anotação
+      if (anotacao) {
+        const response = await fetch(`/api/anotacoes/${anotacao.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conteudo: html }),
+        });
+        if (response.ok) {
+          setEditando(false);
+          carregarAnotacao();
+        } else {
+          console.error("Erro ao atualizar anotação");
+        }
       } else {
-        console.error("Erro ao salvar anotação");
+        const response = await fetch("/api/anotacoes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conteudo: html,
+            baseLegalId: baseLegal.id,
+            usuarioId: session.user.id,
+          }),
+        });
+        if (response.ok) {
+          setEditando(false);
+          carregarAnotacao();
+        } else {
+          console.error("Erro ao criar anotação");
+        }
       }
     } catch (error) {
       console.error("Erro ao salvar anotação:", error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (anotacao) {
+      try {
+        const response = await fetch(`/api/anotacoes/${anotacao.id}`, {
+          method: "DELETE",
+        });
+
+        if (response.ok) {
+          setConteudo("");
+          setAnotacao(null);
+          setDialogAberto(false);
+        } else {
+          console.error("Erro ao deletar anotação");
+        }
+      } catch (error) {
+        console.error("Erro ao deletar anotação:", error);
+      }
     }
   };
 
@@ -561,14 +605,18 @@ function AnotacoesButton({
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
           ) : editando ? (
-            <EditorRichText conteudo={conteudo} setConteudo={setConteudo} />
+            <EditorRichText
+              conteudo={conteudo}
+              setConteudo={setConteudo}
+              onDelete={handleDelete}
+            />
           ) : (
             <div
               className="prose max-w-none p-4 border rounded-md h-full overflow-y-auto"
               dangerouslySetInnerHTML={{
                 __html:
                   conteudo ||
-                  "<p>Nenhuma anotação ainda. Clique em Editar para adicionar.</p>",
+                  "<p class='text-gray-500'>Nenhuma anotação ainda. Clique em Editar para adicionar.</p>",
               }}
             />
           )}
@@ -604,122 +652,5 @@ function AnotacoesButton({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// Componente editor de texto rico
-function EditorRichText({
-  conteudo,
-  setConteudo,
-}: {
-  conteudo: string;
-  setConteudo: (conteudo: string) => void;
-}) {
-  const aplicarFormato = (comando: string, valor: string = "") => {
-    document.execCommand(comando, false, valor);
-    // Atualizar o conteúdo após aplicar o formato
-    const editor = document.getElementById("editor");
-    if (editor) {
-      setConteudo(editor.innerHTML);
-    }
-  };
-
-  const inserirCabecalho = (nivel: number) => {
-    aplicarFormato("formatBlock", `<h${nivel}>`);
-  };
-
-  return (
-    <div className="border rounded-md h-full flex flex-col">
-      <div className="border-b p-2 flex flex-wrap gap-1">
-        <button
-          onClick={() => aplicarFormato("bold")}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Negrito"
-        >
-          <strong>B</strong>
-        </button>
-        <button
-          onClick={() => aplicarFormato("italic")}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Itálico"
-        >
-          <em>I</em>
-        </button>
-        <button
-          onClick={() => aplicarFormato("underline")}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Sublinhado"
-        >
-          <u>S</u>
-        </button>
-        <div className="border-l mx-1 h-6"></div>
-        <button
-          onClick={() => inserirCabecalho(1)}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Título 1"
-        >
-          H1
-        </button>
-        <button
-          onClick={() => inserirCabecalho(2)}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Título 2"
-        >
-          H2
-        </button>
-        <button
-          onClick={() => inserirCabecalho(3)}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Título 3"
-        >
-          H3
-        </button>
-        <div className="border-l mx-1 h-6"></div>
-        <button
-          onClick={() => aplicarFormato("insertUnorderedList")}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Lista não ordenada"
-        >
-          • Lista
-        </button>
-        <button
-          onClick={() => aplicarFormato("insertOrderedList")}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Lista ordenada"
-        >
-          1. Lista
-        </button>
-        <div className="border-l mx-1 h-6"></div>
-        <button
-          onClick={() => aplicarFormato("justifyLeft")}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Alinhar à esquerda"
-        >
-          ↶
-        </button>
-        <button
-          onClick={() => aplicarFormato("justifyCenter")}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Centralizar"
-        >
-          ⇄
-        </button>
-        <button
-          onClick={() => aplicarFormato("justifyRight")}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Alinhar à direita"
-        >
-          ↷
-        </button>
-      </div>
-      <div
-        id="editor"
-        className="p-4 flex-1 overflow-auto prose max-w-none focus:outline-none"
-        contentEditable
-        dangerouslySetInnerHTML={{ __html: conteudo }}
-        onInput={(e) => setConteudo(e.currentTarget.innerHTML)}
-        style={{ minHeight: "300px" }}
-      />
-    </div>
   );
 }
