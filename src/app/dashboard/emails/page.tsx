@@ -96,176 +96,42 @@ export default function EmailsPage() {
       return;
     }
 
-    if (atividadesSelecionadas.length === 0) {
-      toast.error("Selecione pelo menos uma atividade");
-      return;
-    }
-
-    if (
-      dadosApuracao.length === 0 ||
-      dadosApuracao.some((dados) => {
-        const totalVendas = calcularTotalVendas(dados);
-        return !totalVendas && !dados.totalCompras;
-      })
-    ) {
-      toast.error("Preencha os dados de pelo menos um mês");
-      return;
-    }
-
     try {
       setCarregandoAnalise(true);
 
       const empresa = empresas.find((e) => e.id === empresaSelecionada);
       if (!empresa) return;
 
-      // Construir prompt detalhado para o ChatGPT
-      const prompt = criarPromptAnalise(
-        empresa,
-        atividadesSelecionadas,
-        dadosApuracao
-      );
+      // Prompt SIMPLIFICADO para teste
+      const prompt = `
+EMPRESA: ${empresa.razaoSocial}
+REGIME: ${formatarRegimeTributario(empresa.regimeTributacao)}
+UF: ${empresa.uf}
 
-      // Chamar a API para gerar a análise com ChatGPT
+ANÁLISE RÁPIDA: Forneça uma análise tributária resumida em 5 linhas sobre o regime ${formatarRegimeTributario(empresa.regimeTributacao)} no estado ${empresa.uf}.
+`;
+
+      // Chamar a API para teste
       const response = await fetch("/api/gerar-analise", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Erro ao gerar análise");
+        throw new Error("Erro na API");
       }
 
       const data = await response.json();
-
-      if (!data.analise) {
-        throw new Error("Resposta da API vazia");
-      }
-
-      setAnalise(data.analise);
-
-      // Salvar no histórico
-      setHistoricoAnalises((prev) => [
-        ...prev,
-        {
-          empresa: empresa.razaoSocial,
-          data: new Date().toLocaleString("pt-BR"),
-          analise: data.analise,
-        },
-      ]);
-
-      toast.success("Análise gerada com sucesso!");
+      setAnalise(data.analise || "Análise gerada com sucesso!");
+      toast.success("Teste realizado!");
     } catch (error) {
-      console.error("Erro ao gerar análise:", error);
-      toast.error("Erro ao gerar análise tributária");
+      console.error("Erro:", error);
+      toast.error("Erro no teste da API");
     } finally {
       setCarregandoAnalise(false);
     }
   };
-
-  const criarPromptAnalise = (
-    empresa: Empresa,
-    atividades: Atividade[],
-    dados: DadosApuracao[]
-  ): string => {
-    const regime = getTipoRegime(empresa.regimeTributacao);
-    const formatarValor = (valor: number) =>
-      valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-    let prompt = `
-ANÁLISE TRIBUTÁRIA DETALHADA
-
-EMPRESA:
-- Razão Social: ${empresa.razaoSocial}
-- CNPJ: ${empresa.cnpj}
-- UF: ${empresa.uf}
-- Regime Tributário: ${formatarRegimeTributario(empresa.regimeTributacao)}
-- Responsável: ${empresa.responsavel}
-
-ATIVIDADES: ${atividades.map((a) => a.charAt(0).toUpperCase() + a.slice(1)).join(", ")}
-
-DADOS FINANCEIROS POR MÊS:
-`;
-
-    dados.forEach((dadosMes) => {
-      const totalVendas = calcularTotalVendas(dadosMes);
-      prompt += `
-${dadosMes.mes.toUpperCase()}:
-- Faturamento Total: ${formatarValor(totalVendas)}
-${atividades
-  .map(
-    (atividade) =>
-      `- Faturamento ${atividade.charAt(0).toUpperCase() + atividade.slice(1)}: ${formatarValor(dadosMes.faturamento[atividade] || 0)}`
-  )
-  .join("\n")}
-- Compras: ${formatarValor(dadosMes.totalCompras || 0)}
-`;
-
-      if (regime === "simples") {
-        prompt += `- Simples Nacional: ${formatarValor(dadosMes.impostos.simples || 0)}\n`;
-      } else {
-        prompt += `- ICMS: ${formatarValor(dadosMes.impostos.icms || 0)}\n`;
-        prompt += `- PIS: ${formatarValor(dadosMes.impostos.pis || 0)}\n`;
-        prompt += `- COFINS: ${formatarValor(dadosMes.impostos.cofins || 0)}\n`;
-        if (dadosMes.impostos.ipi)
-          prompt += `- IPI: ${formatarValor(dadosMes.impostos.ipi)}\n`;
-        if (dadosMes.impostos.iss)
-          prompt += `- ISS: ${formatarValor(dadosMes.impostos.iss)}\n`;
-      }
-    });
-
-    prompt += `
-
-INSTRUÇÕES PARA ANÁLISE:
-
-Por favor, forneça uma análise tributária completa incluindo:
-
-1. RESUMO EXECUTIVO
-   - Visão geral da situação tributária
-   - Principais indicadores
-   - Tendências observadas
-
-2. ANÁLISE COMPARATIVA MENSAL
-   - Evolução do faturamento por atividade
-   - Variação dos impostos
-   - Comparativo entre meses
-
-3. CÁLCULO DE PERCENTUAIS TRIBUTÁRIOS
-   - Carga tributária efetiva
-   - Comparativo com média do setor
-   - Análise por tipo de atividade
-
-4. OPORTUNIDADES DE ECONOMIA TRIBUTÁRIA
-   - Sugestões específicas para o regime ${formatarRegimeTributario(empresa.regimeTributacao)}
-   - Possíveis créditos fiscais
-   - Estratégias de planejamento tributário
-
-5. PONTOS DE ATENÇÃO
-   - Possíveis irregularidades
-   - Riscos fiscais identificados
-   - Obrigações acessórias pendentes
-
-6. RECOMENDAÇÕES ESPECÍFICAS
-   - Ações imediatas
-   - Estratégias de longo prazo
-   - Sugestões para cada atividade
-
-7. PRÓXIMOS PASSOS
-   - Cronograma de implementação
-   - Documentação necessária
-   - Prazos importantes
-
-Use tabelas para comparar valores mensais quando apropriado.
-Seja específico com referências à legislação tributária brasileira.
-Destaque oportunidades de economia com base nas atividades exercidas.
-`;
-
-    return prompt;
-  };
-
   const carregarAnaliseDoHistorico = (analiseSalva: string) => {
     setAnalise(analiseSalva);
     setMostrarHistorico(false);

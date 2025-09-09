@@ -23,6 +23,10 @@ model Usuario {
   Empresa              Empresa[]
 
   Pendencia Pendencia[]
+
+  BaseLegal BaseLegal[]
+
+  Anotacao Anotacao[]
 }
 
 model Account {
@@ -195,4 +199,34 @@ model Pendencia {
   atualizadoEm DateTime @updatedAt
   usuario      Usuario  @relation(fields: [usuarioId], references: [id])
   usuarioId    String
+}
+
+model BaseLegal {
+  id              String   @id @default(cuid())
+  titulo          String
+  descricao       String?
+  link            String?
+  uf              String
+  categoria       String?
+  dataPublicacao  DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  usuarioId       String
+  usuario         Usuario  @relation(fields: [usuarioId], references: [id])
+
+  Anotacao Anotacao[]
+}
+
+model Anotacao {
+  id           String   @id @default(cuid())
+  conteudo     String   @db.Text
+  baseLegalId  String
+  usuarioId    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+  baseLegal BaseLegal @relation(fields: [baseLegalId], references: [id])
+
+  @@unique([baseLegalId, usuarioId])
 }
