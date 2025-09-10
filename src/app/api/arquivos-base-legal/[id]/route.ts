@@ -6,14 +6,15 @@ const prisma = new PrismaClient();
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log(`[API ARQUIVO] Excluindo arquivo ID: ${params.id}`);
+    const resolvedParams = await params;
+    console.log(`[API ARQUIVO] Excluindo arquivo ID: ${resolvedParams.id}`);
 
     // Buscar o arquivo no banco
     const arquivo = await prisma.arquivoBaseLegal.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
     });
 
     if (!arquivo) {
@@ -24,9 +25,9 @@ export async function DELETE(
     }
 
     // Excluir do Supabase Storage
-    const urlParts = arquivo.url.split('/');
-    const filePath = urlParts.slice(urlParts.indexOf('bases-legais')).join('/');
-    
+    const urlParts = arquivo.url.split("/");
+    const filePath = urlParts.slice(urlParts.indexOf("bases-legais")).join("/");
+
     const { error: storageError } = await supabase.storage
       .from("bases-legais")
       .remove([filePath]);
@@ -37,14 +38,13 @@ export async function DELETE(
 
     // Excluir do banco de dados
     await prisma.arquivoBaseLegal.delete({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Arquivo excluído com sucesso" 
+    return NextResponse.json({
+      success: true,
+      message: "Arquivo excluído com sucesso",
     });
-
   } catch (error: any) {
     console.error("[API ARQUIVO] Erro ao excluir:", error);
     return NextResponse.json(
