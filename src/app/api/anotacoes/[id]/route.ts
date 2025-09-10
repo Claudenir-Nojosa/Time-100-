@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 
-interface RouteContext {
-  params: { id: string };
-}
-
-export async function DELETE(request: NextRequest, context: RouteContext) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const id = context.params.id;
+    const { id } = await params;
 
     await db.anotacao.delete({
       where: { id },
@@ -23,10 +22,13 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function PUT(request: NextRequest, context: RouteContext) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { conteudo } = await request.json();
-    const id = context.params.id;
+    const { id } = await params;
 
     const anotacao = await db.anotacao.update({
       where: { id },
