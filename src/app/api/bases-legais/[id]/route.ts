@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import db from "@/lib/db";
 
-
-
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log(`[API BASE LEGAL] Editando base legal ID: ${params.id}`);
+    const resolvedParams = await params;
+    console.log(`[API BASE LEGAL] Editando base legal ID: ${resolvedParams.id}`);
 
     const formData = await request.formData();
     
@@ -28,7 +27,7 @@ export async function PUT(
 
     // Verificar se a base legal existe
     const baseExistente = await db.baseLegal.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       include: { ArquivoBaseLegal: true },
     });
 
@@ -41,7 +40,7 @@ export async function PUT(
 
     // Atualizar a base legal
     const baseLegal = await db.baseLegal.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
         titulo,
         descricao: descricao || "",
@@ -104,7 +103,7 @@ export async function PUT(
 
     // Retornar a base legal atualizada com todos os arquivos
     const baseLegalCompleta = await db.baseLegal.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       include: {
         ArquivoBaseLegal: true,
       },
@@ -123,14 +122,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log(`[API BASE LEGAL] Excluindo base legal ID: ${params.id}`);
+    const resolvedParams = await params;
+    console.log(`[API BASE LEGAL] Excluindo base legal ID: ${resolvedParams.id}`);
 
     // Verificar se a base legal existe
     const baseExistente = await db.baseLegal.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       include: { ArquivoBaseLegal: true },
     });
 
@@ -159,15 +159,15 @@ export async function DELETE(
 
     // Excluir registros do banco de dados (em ordem correta por causa das FK)
     await db.anotacao.deleteMany({
-      where: { baseLegalId: params.id },
+      where: { baseLegalId: resolvedParams.id },
     });
 
     await db.arquivoBaseLegal.deleteMany({
-      where: { baseLegalId: params.id },
+      where: { baseLegalId: resolvedParams.id },
     });
 
     await db.baseLegal.delete({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
     });
 
     return NextResponse.json({ 
