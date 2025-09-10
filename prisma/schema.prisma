@@ -248,3 +248,12 @@ model Anotacao {
 
   @@unique([baseLegalId, usuarioId])
 }
+
+model Diagnostico {
+  id          String   @id @default(cuid())
+  data        DateTime @default(now())
+  cnpj        String
+  nomeEmpresa String
+  status      String
+  formData    Json
+}
