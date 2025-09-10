@@ -9,6 +9,7 @@ import {
   Plus,
   X,
   GripVertical,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 interface Atividade {
   id: string;
@@ -118,6 +126,20 @@ export default function CalendarioPage() {
 
   const [filtroConcluidas, setFiltroConcluidas] = useState<boolean>(true);
   const [openFiltroPopover, setOpenFiltroPopover] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [mobileDayView, setMobileDayView] = useState<Date | null>(null);
+
+  // Verificar tamanho da tela
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
 
   // Cleanup effect para remover classes de drag
   useEffect(() => {
@@ -623,13 +645,13 @@ export default function CalendarioPage() {
 
           <div className="flex justify-between items-start gap-2 ml-4">
             <div className="flex items-start gap-2 flex-1 min-w-0">
-              <Avatar className="h-5 w-5 flex-shrink-0 mt-0.5">
+              <Avatar className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0 mt-0.5">
                 <AvatarImage
                   src={atividade.responsavelImg || ""}
                   alt={atividade.responsavel}
                   className="object-cover"
                 />
-                <AvatarFallback className="text-xs bg-gray-100">
+                <AvatarFallback className="text-[10px] md:text-xs bg-gray-100">
                   {atividade.responsavel
                     .split(" ")
                     .slice(0, 2)
@@ -639,16 +661,16 @@ export default function CalendarioPage() {
                 </AvatarFallback>
               </Avatar>
 
-              <div className="flex flex-col min-w-0">
+              <div className="flex flex-col min-w-0 flex-1">
                 {atividade.horario && (
                   <span className="font-medium text-xs whitespace-nowrap">
                     {atividade.horario}
                   </span>
                 )}
-                <span className="text-xs break-words whitespace-normal">
+                <span className="text-xs break-words line-clamp-2 leading-tight">
                   {atividade.nome}
                 </span>
-                <span className="text-[10px]  mt-0.5">
+                <span className="text-[10px] mt-0.5 opacity-80">
                   {CATEGORIAS[atividade.categoria].label}
                 </span>
               </div>
@@ -682,6 +704,7 @@ export default function CalendarioPage() {
     });
   };
 
+  // E na função renderDays, ajuste as células do calendário:
   const renderDays = () => {
     const days = [];
     let day = 1;
@@ -692,14 +715,14 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`empty-${i}`}
-          className={`min-h-40 p-2 border dark:border-emerald-900/40 ${
+          className={`min-h-24 sm:min-h-28 md:min-h-36 lg:min-h-40 p-1 sm:p-1.5 md:p-2 border dark:border-emerald-900/40 ${
             isWeekend(dayIndex)
               ? "dark:bg-gray-900 bg-emerald-50/30"
               : "dark:bg-gray-950 bg-white"
           } text-gray-400 dark:text-emerald-500/70`}
         >
           <div className="flex justify-between items-start">
-            <span>{prevDate.getDate()}</span>
+            <span className="text-xs sm:text-sm">{prevDate.getDate()}</span>
           </div>
         </div>
       );
@@ -714,33 +737,60 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`day-${i}`}
-          className={`day-cell min-h-40 p-2 border dark:border-emerald-900/40 transition-all flex flex-col
+          className={`day-cell min-h-24 sm:min-h-28 md:min-h-36 lg:min-h-40 p-1 sm:p-1.5 md:p-2 border dark:border-emerald-900/40 transition-all flex flex-col
           ${isToday ? "dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-600" : ""}
-          ${isWeekend(dayIndex) ? "dark:bg-gray-900 bg-emerald-50/30" : "dark:bg-gray-950 bg-white"}`}
+          ${isWeekend(dayIndex) ? "dark:bg-gray-900 bg-emerald-50/30" : "dark:bg-gray-950 bg-white"}
+          ${isMobileView ? "cursor-pointer" : ""}`}
           onDragOver={(e) => handleDragOver(e, currentDay)}
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, currentDay)}
+          onClick={() => isMobileView && setMobileDayView(currentDay)}
         >
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start mb-1">
             <span
-              className={`text-sm font-medium ${
+              className={`text-xs sm:text-sm font-medium ${
                 isToday
-                  ? "bg-gradient-to-br from-emerald-500 via-emerald-600 to-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-[0_0_6px_0_rgba(192,132,252,0.7)]"
+                  ? "bg-gradient-to-br from-emerald-500 via-emerald-600 to-green-500 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center shadow-[0_0_6px_0_rgba(192,132,252,0.7)]"
                   : "dark:text-emerald-100 text-gray-800"
               }`}
             >
               {i}
             </span>
-            <button
-              onClick={() => handleOpenDialog(currentDay)}
-              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-1"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
+            {!isMobileView && (
+              <button
+                onClick={() => handleOpenDialog(currentDay)}
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-0.5 sm:p-1"
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+              </button>
+            )}
           </div>
-          <div className="mt-1 flex-1 space-y-1 overflow-y-auto">
-            {renderAtividadesDoDia(atividadesDoDia, currentDay)}
-          </div>
+          {!isMobileView && (
+            <div className="mt-1 flex-1 space-y-1 overflow-y-auto">
+              {renderAtividadesDoDia(atividadesDoDia, currentDay)}
+            </div>
+          )}
+          {isMobileView && atividadesDoDia.length > 0 && (
+            <div className="mt-1 flex justify-center">
+              <div className="flex flex-wrap gap-0.5">
+                {atividadesDoDia.slice(0, 3).map((atividade) => {
+                  const categoriaConfig = CATEGORIAS[atividade.categoria];
+                  return (
+                    <div
+                      key={atividade.id}
+                      className={`w-2 h-2 rounded-full ${categoriaConfig.corEscura}`}
+                      title={atividade.nome}
+                    ></div>
+                  );
+                })}
+                {atividadesDoDia.length > 3 && (
+                  <span className="text-[10px] text-gray-500">
+                    +{atividadesDoDia.length - 3}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -754,7 +804,7 @@ export default function CalendarioPage() {
       days.push(
         <div
           key={`next-${i}`}
-          className={`min-h-40 p-2 border dark:border-emerald-900/40 ${
+          className={`min-h-24 sm:min-h-28 md:min-h-36 lg:min-h-40 p-1 sm:p-1.5 md:p-2 border dark:border-emerald-900/40 ${
             isWeekend(dayIndex)
               ? "dark:bg-gray-900 bg-emerald-50/30"
               : "dark:bg-gray-950 bg-white"
@@ -764,7 +814,7 @@ export default function CalendarioPage() {
           onDrop={(e) => handleDrop(e, nextDate)}
         >
           <div className="flex justify-between items-start">
-            <span>{i}</span>
+            <span className="text-xs sm:text-sm">{i}</span>
           </div>
         </div>
       );
@@ -773,122 +823,284 @@ export default function CalendarioPage() {
     return days;
   };
 
+  const renderMobileDayView = () => {
+    if (!mobileDayView) return null;
+
+    const atividadesDoDia = getAtividadesDoDia(mobileDayView);
+    const isToday = mobileDayView.toDateString() === new Date().toDateString();
+
+    return (
+      <Sheet
+        open={!!mobileDayView}
+        onOpenChange={(open) => !open && setMobileDayView(null)}
+      >
+        <SheetContent
+          side="bottom"
+          className="h-3/4 rounded-t-2xl max-w-md mx-auto"
+        >
+          <SheetHeader className="mb-4 text-center px-10">
+            <SheetTitle className="flex flex-col items-center">
+              <span className="text-lg font-semibold">
+                {mobileDayView.toLocaleDateString("pt-BR", {
+                  weekday: "long",
+                  day: "numeric",
+                })}
+              </span>
+              <span className="text-sm text-gray-500 font-normal">
+                {mobileDayView.toLocaleDateString("pt-BR", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </span>
+              {isToday && (
+                <span className="text-xs text-emerald-600 mt-1 bg-emerald-100 px-2 py-1 rounded-full">
+                  Hoje
+                </span>
+              )}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="absolute top-4 leftt-4">
+            <Button
+              size="icon"
+              onClick={() => {
+                handleOpenDialog(mobileDayView);
+                setMobileDayView(null);
+              }}
+              className="h-8 w-8 rounded-full bg-emerald-600 hover:bg-emerald-700"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-3 overflow-y-auto h-full pb-20 pt-2">
+            {atividadesDoDia.length > 0 ? (
+              <div className="px-2">
+                {atividadesDoDia.map((atividade) => {
+                  const categoriaConfig = CATEGORIAS[atividade.categoria];
+                  const estilo = atividade.concluida
+                    ? categoriaConfig.corConcluida
+                    : categoriaConfig.cor;
+
+                  return (
+                    <div
+                      key={atividade.id}
+                      className={`p-3 rounded-lg border mb-2 ${estilo}`}
+                      onClick={() => handleToggleConcluida(atividade)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          {atividade.horario && (
+                            <div className="text-xs font-medium text-gray-700 mb-1">
+                              {atividade.horario}
+                            </div>
+                          )}
+                          <div className="text-sm font-medium mb-1">
+                            {atividade.nome}
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs px-2 py-1 bg-white/50 rounded-full">
+                              {categoriaConfig.label}
+                            </span>
+                            <div className="flex items-center text-xs text-gray-600">
+                              <Avatar className="h-5 w-5 mr-1">
+                                <AvatarImage
+                                  src={atividade.responsavelImg || ""}
+                                  alt={atividade.responsavel}
+                                />
+                                <AvatarFallback className="text-xs">
+                                  {atividade.responsavel
+                                    .split(" ")
+                                    .slice(0, 2)
+                                    .map((n) => n[0])
+                                    .join("")
+                                    .toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="truncate max-w-20">
+                                {atividade.responsavel.split(" ")[0]}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 ml-2">
+                          <button
+                            className="text-gray-500 hover:text-gray-700 p-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditAtividade(atividade);
+                            }}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          <button
+                            className="text-red-500 hover:text-red-700 p-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmDelete(atividade.id);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-12">
+                <div className="text-lg font-medium mb-2">
+                  Nenhuma atividade
+                </div>
+                <div className="text-sm">Para este dia</div>
+                <Button
+                  className="mt-4 bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => {
+                    handleOpenDialog(mobileDayView);
+                    setMobileDayView(null);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar atividade
+                </Button>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  };
+
   return (
-    <div className="container mx-auto py-8 px-4 mt-10">
+    <div className="container mx-auto py-4 md:py-8 px-2 md:px-4 mt-10">
       {/* Cabeçalho */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold dark:text-emerald-100 text-gray-800">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold dark:text-emerald-100 text-gray-800">
           Calendário
         </h1>
-        <div className="flex items-center space-x-4 dark:bg-emerald-950/20 bg-white rounded-lg shadow-sm p-2 border dark:border-emerald-900/30 border-gray-200">
-          <Popover open={openFiltroPopover} onOpenChange={setOpenFiltroPopover}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="dark:border-emerald-900/30 dark:hover:bg-emerald-900/20"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filtrar
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 dark:bg-black dark:border-emerald-900/30">
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <h4 className="font-medium dark:text-emerald-100">
-                    Categorias
-                  </h4>
-                  <div className="grid gap-2">
-                    {Object.entries(CATEGORIAS).map(([key, categoria]) => (
-                      <div key={key} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`filter-${key}`}
-                          checked={filtros[key as CategoriaType]}
-                          onCheckedChange={(checked) => {
-                            setFiltros((prev) => ({
-                              ...prev,
-                              [key]: checked === true,
-                            }));
-                          }}
-                        />
-                        <Label
-                          htmlFor={`filter-${key}`}
-                          className="text-sm font-normal dark:text-emerald-100"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-3 h-3 rounded-full ${categoria.corEscura}`}
-                            ></div>
-                            {categoria.label}
-                          </div>
-                        </Label>
-                      </div>
-                    ))}
+        <div className="flex items-center space-x-2 md:space-x-4 dark:bg-emerald-950/20 bg-white rounded-lg shadow-sm p-2 border dark:border-emerald-900/30 border-gray-200 w-full md:w-auto justify-between">
+          <div className="flex items-center">
+            <Popover
+              open={openFiltroPopover}
+              onOpenChange={setOpenFiltroPopover}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size={isMobileView ? "sm" : "default"}
+                  className="dark:border-emerald-900/30 dark:hover:bg-emerald-900/20"
+                >
+                  <Filter className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                  <span className="hidden md:inline">Filtrar</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 dark:bg-black dark:border-emerald-900/30">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium dark:text-emerald-100">
+                      Categorias
+                    </h4>
+                    <div className="grid gap-2">
+                      {Object.entries(CATEGORIAS).map(([key, categoria]) => (
+                        <div key={key} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`filter-${key}`}
+                            checked={filtros[key as CategoriaType]}
+                            onCheckedChange={(checked) => {
+                              setFiltros((prev) => ({
+                                ...prev,
+                                [key]: checked === true,
+                              }));
+                            }}
+                          />
+                          <Label
+                            htmlFor={`filter-${key}`}
+                            className="text-sm font-normal dark:text-emerald-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-3 h-3 rounded-full ${categoria.corEscura}`}
+                              ></div>
+                              {categoria.label}
+                            </div>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="font-medium dark:text-emerald-100">
+                      Status
+                    </h4>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-concluidas"
+                        checked={filtroConcluidas}
+                        onCheckedChange={(checked) =>
+                          setFiltroConcluidas(checked === true)
+                        }
+                      />
+                      <Label
+                        htmlFor="filter-concluidas"
+                        className="text-sm font-normal dark:text-emerald-200"
+                      >
+                        Mostrar concluídas
+                      </Label>
+                    </div>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <h4 className="font-medium dark:text-emerald-100">Status</h4>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="filter-concluidas"
-                      checked={filtroConcluidas}
-                      onCheckedChange={(checked) =>
-                        setFiltroConcluidas(checked === true)
-                      }
-                    />
-                    <Label
-                      htmlFor="filter-concluidas"
-                      className="text-sm font-normal dark:text-emerald-200"
-                    >
-                      Mostrar concluídas
-                    </Label>
-                  </div>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={prevMonth}
-            className="dark:hover:bg-emerald-900/30 hover:bg-emerald-100 rounded-full p-2"
-          >
-            <ChevronLeft className="h-5 w-5 dark:text-emerald-300 text-emerald-600" />
-          </Button>
-          <h2 className="text-xl font-semibold dark:text-emerald-100 text-gray-700 min-w-[180px] text-center">
-            {monthNames[month]} {year}
-          </h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={nextMonth}
-            className="dark:hover:bg-emerald-900/30 hover:bg-emerald-100 rounded-full p-2"
-          >
-            <ChevronRight className="h-5 w-5 dark:text-emerald-300 text-emerald-600" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Legenda de categorias */}
-      <div className="flex flex-wrap gap-4 mb-6 p-4 dark:bg-emerald-950/10 bg-white rounded-lg border dark:border-emerald-900/30 border-gray-200">
-        {/* Categorias */}
-        {Object.entries(CATEGORIAS).map(([key, categoria]) => (
-          <div key={key} className="flex items-center gap-2">
-            <div
-              className={`w-3 h-3 rounded-full ${categoria.corEscura}`}
-            ></div>
-            <span className="text-sm dark:text-emerald-100">
-              {categoria.label}
-            </span>
+              </PopoverContent>
+            </Popover>
           </div>
-        ))}
 
-        {/* Concluído */}
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-green-500"></div>
-          <span className="text-sm dark:text-emerald-100">Concluído</span>
+          <div className="flex items-center space-x-1 md:space-x-2">
+            <Button
+              variant="ghost"
+              size={isMobileView ? "sm" : "default"}
+              onClick={prevMonth}
+              className="dark:hover:bg-emerald-900/30 hover:bg-emerald-100 rounded-full p-1 md:p-2"
+            >
+              <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 dark:text-emerald-300 text-emerald-600" />
+            </Button>
+            <h2 className="text-sm md:text-xl font-semibold dark:text-emerald-100 text-gray-700 min-w-[120px] md:min-w-[180px] text-center">
+              {monthNames[month]} {year}
+            </h2>
+            <Button
+              variant="ghost"
+              size={isMobileView ? "sm" : "default"}
+              onClick={nextMonth}
+              className="dark:hover:bg-emerald-900/30 hover:bg-emerald-100 rounded-full p-1 md:p-2"
+            >
+              <ChevronRight className="h-4 w-4 md:h-5 md:w-5 dark:text-emerald-300 text-emerald-600" />
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Legenda de categorias - Ocultar em mobile para economizar espaço */}
+      {!isMobileView && (
+        <div className="flex flex-wrap gap-4 mb-6 p-4 dark:bg-emerald-950/10 bg-white rounded-lg border dark:border-emerald-900/30 border-gray-200">
+          {/* Categorias */}
+          {Object.entries(CATEGORIAS).map(([key, categoria]) => (
+            <div key={key} className="flex items-center gap-2">
+              <div
+                className={`w-3 h-3 rounded-full ${categoria.corEscura}`}
+              ></div>
+              <span className="text-sm dark:text-emerald-100">
+                {categoria.label}
+              </span>
+            </div>
+          ))}
+
+          {/* Concluído */}
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <span className="text-sm dark:text-emerald-100">Concluído</span>
+          </div>
+        </div>
+      )}
 
       {/* Grid do Calendário */}
       <div className="dark:bg-emerald-950/10 bg-white rounded-xl shadow-sm overflow-hidden border dark:border-emerald-900/30 border-gray-200">
@@ -896,20 +1108,20 @@ export default function CalendarioPage() {
           {dayNames.map((day, index) => (
             <div
               key={day}
-              className={`py-3 text-center font-medium text-sm 
+              className={`py-2 md:py-3 text-center font-medium text-xs md:text-sm 
                 ${
                   isWeekend(index)
                     ? "dark:text-emerald-300 text-emerald-600 dark:bg-emerald-950/10 bg-emerald-50/30"
                     : "dark:text-emerald-100 text-gray-700"
                 }`}
             >
-              {day}
+              {isMobileView ? day.charAt(0) : day}
             </div>
           ))}
         </div>
 
         {isLoading ? (
-          <CalendarSkeleton />
+          <CalendarSkeleton isMobile={isMobileView} />
         ) : (
           <div className="grid grid-cols-7 gap-px dark:bg-gray-950 bg-gray-100">
             {renderDays()}
@@ -917,12 +1129,14 @@ export default function CalendarioPage() {
         )}
       </div>
 
+      {renderMobileDayView()}
+
       {/* Dialog para adicionar/editar atividade */}
       <Dialog
         open={openDialog}
         onOpenChange={(open) => !open && setOpenDialog(false)}
       >
-        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-emerald-900/30 bg-white">
+        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-emerald-900/30 bg-white mx-2 md:mx-0">
           <DialogHeader>
             <DialogTitle className="dark:text-emerald-100">
               {atividadeParaEditar ? "Editar Atividade" : "Nova Atividade"}
@@ -933,7 +1147,7 @@ export default function CalendarioPage() {
             <div className="grid grid-cols-4 items-center gap-4">
               <label
                 htmlFor="nome"
-                className="text-right dark:text-emerald-200"
+                className="text-right dark:text-emerald-200 text-sm"
               >
                 Nome:
               </label>
@@ -951,7 +1165,7 @@ export default function CalendarioPage() {
             <div className="grid grid-cols-4 items-center gap-4">
               <label
                 htmlFor="categoria"
-                className="text-right dark:text-emerald-200"
+                className="text-right dark:text-emerald-200 text-sm"
               >
                 Categoria:
               </label>
@@ -995,7 +1209,7 @@ export default function CalendarioPage() {
             <div className="grid grid-cols-4 items-center gap-4">
               <label
                 htmlFor="horario"
-                className="text-right dark:text-emerald-200"
+                className="text-right dark:text-emerald-200 text-sm"
               >
                 Horário:
               </label>
@@ -1015,7 +1229,7 @@ export default function CalendarioPage() {
             <div className="grid grid-cols-4 items-center gap-4">
               <label
                 htmlFor="responsavel"
-                className="text-right dark:text-emerald-200"
+                className="text-right dark:text-emerald-200 text-sm"
               >
                 Responsável:
               </label>
@@ -1029,7 +1243,7 @@ export default function CalendarioPage() {
             <div className="grid grid-cols-4 items-center gap-4">
               <label
                 htmlFor="data"
-                className="text-right dark:text-emerald-200"
+                className="text-right dark:text-emerald-200 text-sm"
               >
                 Data:
               </label>
@@ -1065,7 +1279,7 @@ export default function CalendarioPage() {
 
       {/* Dialog de confirmação de exclusão */}
       <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-emerald-900/30 bg-white border-2">
+        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-emerald-900/30 bg-white border-2 mx-2 md:mx-0">
           <DialogHeader>
             <DialogTitle className="dark:text-emerald-100">
               Confirmar Exclusão

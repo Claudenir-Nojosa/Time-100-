@@ -267,7 +267,7 @@ const CNPJConsulta = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-emerald-100 dark:from-gray-950 dark:to-emerald-950/30 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen dark:from-gray-950 dark:to-emerald-950/30 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <Card className="border-emerald-200 dark:border-emerald-900/30 shadow-lg dark:bg-gray-950">
           <CardHeader className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-100 border-b border-emerald-200 dark:border-emerald-900/30 rounded-t-lg">
