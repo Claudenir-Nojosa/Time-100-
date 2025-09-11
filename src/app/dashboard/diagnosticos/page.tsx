@@ -27,12 +27,18 @@ import {
   FileTextIcon,
   Plus,
   List,
-  Upload,
-  Download,
+  Edit,
+  Trash2,
   FileUp,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSession } from "next-auth/react";
+
+interface DiagnosticoCompleto extends Diagnostico {
+  formData: FormData;
+}
 
 // Interface para os dados da empresa baseada na API da ReceitaWS
 interface Empresa {
@@ -73,6 +79,7 @@ interface Diagnostico {
 }
 
 // Interface para os dados do formulário
+// Interface para os dados do formulário
 interface FormData {
   cnpj: string;
   empresa: Empresa | null;
@@ -81,20 +88,33 @@ interface FormData {
   notasFiscais: Array<{
     id: number;
     descricao: string;
+    cnae: string;
+    codigoServico: string;
     valor: number;
     aliquota: number;
+    municipio: string;
+    retencoes: {
+      irrf: boolean;
+      csrf: boolean;
+      inss: boolean;
+      iss: boolean;
+    };
   }>;
-  itensComerciais: Array<{
-    id: number;
-    descricao: string;
+  itensTributacao: Array<{
+    id: string;
     ncm: string;
-    valor: number;
+    icms: number;
+    baseLegalIcms: string;
+    pisCofins: number;
+    baseLegalPisCofins: string;
+    ipi: number;
   }>;
   obrigacoesAcessorias: Array<{
     id: string;
     descricao: string;
     status: string;
     vencimento: string;
+    competencia?: string;
   }>;
   parcelamentos: Array<{
     id: string;
@@ -106,6 +126,9 @@ interface FormData {
 
 const DiagnosticoFiscal = () => {
   const [activeTab, setActiveTab] = useState<"list" | "new">("list");
+  const [selectedDiagnostico, setSelectedDiagnostico] =
+    useState<DiagnosticoCompleto | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "view" | "edit">("list");
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     cnpj: "",
@@ -113,10 +136,39 @@ const DiagnosticoFiscal = () => {
     isPrestadorServico: null,
     isComercializacao: null,
     notasFiscais: [],
-    itensComerciais: [],
+    itensTributacao: [
+      {
+        id: "1",
+        ncm: "",
+        icms: 0,
+        baseLegalIcms: "",
+        pisCofins: 0,
+        baseLegalPisCofins: "",
+        ipi: 0,
+      },
+      {
+        id: "2",
+        ncm: "",
+        icms: 0,
+        baseLegalIcms: "",
+        pisCofins: 0,
+        baseLegalPisCofins: "",
+        ipi: 0,
+      },
+      {
+        id: "3",
+        ncm: "",
+        icms: 0,
+        baseLegalIcms: "",
+        pisCofins: 0,
+        baseLegalPisCofins: "",
+        ipi: 0,
+      },
+    ],
     obrigacoesAcessorias: [],
     parcelamentos: [],
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [diagnosticos, setDiagnosticos] = useState<Diagnostico[]>([]);
@@ -125,18 +177,29 @@ const DiagnosticoFiscal = () => {
   const [isProcessingDoc, setIsProcessingDoc] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [notaFiscalDescricao, setNotaFiscalDescricao] = useState("");
-  const [notaFiscalValor, setNotaFiscalValor] = useState("");
   const [notaFiscalAliquota, setNotaFiscalAliquota] = useState("");
-  const [itemComercialDescricao, setItemComercialDescricao] = useState("");
-  const [itemComercialNCM, setItemComercialNCM] = useState("");
-  const [itemComercialValor, setItemComercialValor] = useState("");
   const [obrigacaoDescricao, setObrigacaoDescricao] = useState("");
-  const [obrigacaoStatus, setObrigacaoStatus] = useState("pendente");
+  const [obrigacaoStatus, setObrigacaoStatus] = useState("em-dia");
   const [obrigacaoVencimento, setObrigacaoVencimento] = useState("");
+  const [obrigacaoCompetencia, setObrigacaoCompetencia] = useState("");
+  const [obrigacaoDescricaoPersonalizada, setObrigacaoDescricaoPersonalizada] =
+    useState("");
   const [parcelamentoDescricao, setParcelamentoDescricao] = useState("");
   const [parcelamentoValor, setParcelamentoValor] = useState("");
   const [parcelamentoParcelas, setParcelamentoParcelas] = useState("");
-  
+  const [notaFiscalCnae, setNotaFiscalCnae] = useState("");
+  const [notaFiscalCodigoServico, setNotaFiscalCodigoServico] = useState("");
+  const [retencoes, setRetencoes] = useState({
+    irrf: false,
+    irrfBaseLegal: "",
+    csrf: false,
+    csrfBaseLegal: "",
+    inss: false,
+    inssBaseLegal: "",
+    iss: false,
+    issBaseLegal: "",
+  });
+  const { data: session, status } = useSession();
   const exportarDocumento = async () => {
     const res = await fetch("/api/diagnostico/export", {
       method: "POST",
@@ -334,15 +397,105 @@ const DiagnosticoFiscal = () => {
     }
   };
 
+  // Função para carregar diagnóstico completo
+  const carregarDiagnostico = async (id: string) => {
+    try {
+      const response = await fetch(`/api/diagnosticos/${id}`);
+
+      if (!response.ok) {
+        throw new Error("Erro ao carregar diagnóstico");
+      }
+
+      const diagnostico = await response.json();
+      setSelectedDiagnostico(diagnostico);
+      setViewMode("view");
+    } catch (error) {
+      console.error("Erro ao carregar diagnóstico:", error);
+      // Fallback para localStorage
+      const savedDiagnosticos = localStorage.getItem("diagnosticosCompletos");
+      if (savedDiagnosticos) {
+        const diagnosticosCompletos = JSON.parse(savedDiagnosticos);
+        const diagnostico = diagnosticosCompletos.find((d: any) => d.id === id);
+        if (diagnostico) {
+          setSelectedDiagnostico(diagnostico);
+          setViewMode("view");
+        }
+      }
+    }
+  };
+
+  // Função para editar diagnóstico
+  const editarDiagnostico = (id: string) => {
+    const savedDiagnosticos = localStorage.getItem("diagnosticosCompletos");
+    if (savedDiagnosticos) {
+      const diagnosticosCompletos: DiagnosticoCompleto[] =
+        JSON.parse(savedDiagnosticos);
+      const diagnostico = diagnosticosCompletos.find((d) => d.id === id);
+      if (diagnostico) {
+        setFormData(diagnostico.formData);
+        setCurrentStep(1);
+        setViewMode("list");
+        setActiveTab("new");
+      }
+    }
+  };
+
+  // Função para excluir diagnóstico
+  const excluirDiagnostico = async (id: string) => {
+    try {
+      const response = await fetch(`/api/diagnosticos/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao excluir diagnóstico");
+      }
+
+      // Atualizar lista local
+      setDiagnosticos(diagnosticos.filter((d) => d.id !== id));
+
+      // Remover do localStorage também
+      const savedDiagnosticos = localStorage.getItem("diagnosticosCompletos");
+      if (savedDiagnosticos) {
+        const diagnosticosCompletos = JSON.parse(savedDiagnosticos);
+        const updatedDiagnosticos = diagnosticosCompletos.filter(
+          (d: any) => d.id !== id
+        );
+        localStorage.setItem(
+          "diagnosticosCompletos",
+          JSON.stringify(updatedDiagnosticos)
+        );
+      }
+
+      toast.success("Diagnóstico excluído com sucesso!");
+    } catch (error) {
+      console.error("Erro ao excluir diagnóstico:", error);
+      toast.error("Erro ao excluir diagnóstico");
+    }
+  };
   const handleAnswer = (answer: boolean, field: keyof FormData) => {
     setFormData({ ...formData, [field]: answer });
 
-    // Se a resposta for não, pular para o próximo passo
-    if (!answer && field === "isPrestadorServico" && currentStep === 3) {
-      setTimeout(() => setCurrentStep(4), 500);
-    } else if (!answer && field === "isComercializacao" && currentStep === 4) {
-      setTimeout(() => setCurrentStep(5), 500);
-    } else {
+    // Lógica específica para a pergunta de prestador de serviço
+    if (field === "isPrestadorServico" && currentStep === 3) {
+      if (!answer) {
+        // Se a resposta for não, pular para o próximo passo após 500ms
+        setTimeout(() => setCurrentStep(4), 500);
+      }
+      // Se a resposta for sim, não faz nada (não avança)
+      return;
+    }
+    // Lógica específica para a pergunta de comercialização
+    else if (field === "isComercializacao" && currentStep === 4) {
+      if (!answer) {
+        // Se a resposta for não, pular para o próximo passo após 500ms
+        setTimeout(() => setCurrentStep(5), 500);
+      }
+      // Se a resposta for sim, não faz nada (não avança)
+      return;
+    }
+    // Para todas as outras perguntas, avança normalmente
+    else {
       setTimeout(handleNextStep, 500);
     }
   };
@@ -392,71 +545,39 @@ const DiagnosticoFiscal = () => {
     }
   };
 
-  // Função para adicionar nota fiscal
-  const adicionarNotaFiscal = () => {
-    if (!notaFiscalDescricao || !notaFiscalValor || !notaFiscalAliquota) {
-      toast.error("Preencha todos os campos da nota fiscal");
-      return;
-    }
-
-    const novaNota = {
-      id: Date.now(),
-      descricao: notaFiscalDescricao,
-      valor: parseFloat(notaFiscalValor),
-      aliquota: parseFloat(notaFiscalAliquota),
-    };
-
-    setFormData({
-      ...formData,
-      notasFiscais: [...formData.notasFiscais, novaNota],
-    });
-
-    setNotaFiscalDescricao("");
-    setNotaFiscalValor("");
-    setNotaFiscalAliquota("");
-
-    toast.success("Nota fiscal adicionada com sucesso!");
-  };
-
-  // Função para remover nota fiscal
-  const removerNotaFiscal = (id: number) => {
-    setFormData({
-      ...formData,
-      notasFiscais: formData.notasFiscais.filter((nota) => nota.id !== id),
-    });
-  };
-
-  // Função para adicionar item comercial
-  const adicionarItemComercial = () => {
-    if (!itemComercialDescricao || !itemComercialNCM || !itemComercialValor) {
-      toast.error("Preencha todos os campos do item comercial");
-      return;
-    }
-
+  // Função para adicionar novo item de tributação
+  const adicionarItemTributacao = () => {
     const novoItem = {
-      id: Date.now(),
-      descricao: itemComercialDescricao,
-      ncm: itemComercialNCM,
-      valor: parseFloat(itemComercialValor),
+      id: Date.now().toString(),
+      ncm: "",
+      icms: 0,
+      baseLegalIcms: "",
+      pisCofins: 0,
+      baseLegalPisCofins: "",
+      ipi: 0,
     };
 
     setFormData({
       ...formData,
-      itensComerciais: [...formData.itensComerciais, novoItem],
+      itensTributacao: [...formData.itensTributacao, novoItem],
     });
-
-    setItemComercialDescricao("");
-    setItemComercialNCM("");
-    setItemComercialValor("");
-
-    toast.success("Item comercial adicionado com sucesso!");
   };
 
-  // Função para remover item comercial
-  const removerItemComercial = (id: number) => {
+  // Função para atualizar item de tributação
+  const atualizarItemTributacao = (id: any, campo: any, valor: any) => {
     setFormData({
       ...formData,
-      itensComerciais: formData.itensComerciais.filter(
+      itensTributacao: formData.itensTributacao.map((item) =>
+        item.id === id ? { ...item, [campo]: valor } : item
+      ),
+    });
+  };
+
+  // Função para remover item de tributação
+  const removerItemTributacao = (id: any) => {
+    setFormData({
+      ...formData,
+      itensTributacao: formData.itensTributacao.filter(
         (item) => item.id !== id
       ),
     });
@@ -465,15 +586,34 @@ const DiagnosticoFiscal = () => {
   // Função para adicionar obrigação acessória
   const adicionarObrigacaoAcessoria = () => {
     if (!obrigacaoDescricao || !obrigacaoVencimento) {
-      toast.error("Preencha todos os campos da obrigação acessória");
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    // Se for status pendente, verificar se tem competência
+    if (obrigacaoStatus === "pendente" && !obrigacaoCompetencia) {
+      toast.error("Para obrigações pendentes, informe a competência");
+      return;
+    }
+
+    // Se selecionou "Outra", usar a descrição personalizada
+    const descricaoFinal =
+      obrigacaoDescricao === "Outra"
+        ? obrigacaoDescricaoPersonalizada
+        : obrigacaoDescricao;
+
+    if (obrigacaoDescricao === "Outra" && !obrigacaoDescricaoPersonalizada) {
+      toast.error("Digite a descrição da obrigação");
       return;
     }
 
     const novaObrigacao = {
       id: Date.now().toString(),
-      descricao: obrigacaoDescricao,
+      descricao: descricaoFinal,
       status: obrigacaoStatus,
       vencimento: obrigacaoVencimento,
+      competencia:
+        obrigacaoStatus === "pendente" ? obrigacaoCompetencia : undefined,
     };
 
     setFormData({
@@ -481,8 +621,12 @@ const DiagnosticoFiscal = () => {
       obrigacoesAcessorias: [...formData.obrigacoesAcessorias, novaObrigacao],
     });
 
+    // Reset dos campos
     setObrigacaoDescricao("");
+    setObrigacaoStatus("em-dia");
     setObrigacaoVencimento("");
+    setObrigacaoCompetencia("");
+    setObrigacaoDescricaoPersonalizada("");
 
     toast.success("Obrigação acessória adicionada com sucesso!");
   };
@@ -541,182 +685,189 @@ const DiagnosticoFiscal = () => {
     }
 
     // Conteúdo do diagnóstico
+    // Conteúdo do diagnóstico
     const diagnosticoContent = `
-      <div style="margin-bottom: 30px;">
-        <h2 style="color: #1e40af; text-align: center; margin-bottom: 20px;">DIAGNÓSTICO FISCAL</h2>
-        
-        <div style="margin-bottom: 20px;">
-          <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">1. Dados Cadastrais</h3>
-          <p><strong>Razão Social:</strong> ${formData.empresa?.nome || "Não informado"}</p>
-          <p><strong>Nome Fantasia:</strong> ${formData.empresa?.fantasia || "Não informado"}</p>
-          <p><strong>CNPJ:</strong> ${formData.empresa?.cnpj || "Não informado"}</p>
-          <p><strong>Data de Abertura:</strong> ${
-            formData.empresa?.abertura
-              ? new Date(formData.empresa.abertura).toLocaleDateString("pt-BR")
-              : "Não informado"
-          }</p>
-          <p><strong>Situação:</strong> ${formData.empresa?.situacao || "Não informado"}</p>
-        </div>
+  <div style="margin-bottom: 30px;">
+    <h2 style="color: #1e40af; text-align: center; margin-bottom: 20px;">DIAGNÓSTICO FISCAL</h2>
+    
+    <div style="margin-bottom: 20px;">
+      <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">1. Dados Cadastrais</h3>
+      <p><strong>Razão Social:</strong> ${formData.empresa?.nome || "Não informado"}</p>
+      <p><strong>Nome Fantasia:</strong> ${formData.empresa?.fantasia || "Não informado"}</p>
+      <p><strong>CNPJ:</strong> ${formData.empresa?.cnpj || "Não informado"}</p>
+      <p><strong>Data de Abertura:</strong> ${
+        formData.empresa?.abertura
+          ? new Date(formData.empresa.abertura).toLocaleDateString("pt-BR")
+          : "Não informado"
+      }</p>
+      <p><strong>Situação:</strong> ${formData.empresa?.situacao || "Não informado"}</p>
+    </div>
 
-        <div style="margin-bottom: 20px;">
-          <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">2. Análise de CNAE e Tributação</h3>
-          <p><strong>Atividade Principal:</strong> ${formData.empresa?.atividade_principal[0]?.code || ""} - 
-          ${formData.empresa?.atividade_principal[0]?.text || ""}</p>
-          <p><strong>Regime Tributário:</strong> ${
-            formData.empresa?.simples?.optante
-              ? "Simples Nacional"
-              : "Lucro Presumido"
-          }</p>
-        </div>
-        
-        ${
-          formData.isPrestadorServico
-            ? `
-        <div style="margin-bottom: 20px;">
-          <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">3. Análise de Notas Fiscais de Serviço</h3>
-          ${
-            formData.notasFiscais.length > 0
-              ? `
-            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-              <thead>
-                <tr style="background-color: #f3f4f6;">
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Valor (R$)</th>
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Alíquota (%)</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${formData.notasFiscais
-                  .map(
-                    (nota) => `
-                  <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${nota.descricao}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${nota.valor.toFixed(2)}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${nota.aliquota}%</td>
-                  </tr>
-                `
-                  )
-                  .join("")}
-              </tbody>
-            </table>
-          `
-              : "<p>Nenhuma nota fiscal cadastrada.</p>"
-          }
-        </div>
-        `
-            : ""
-        }
-        
-        ${
-          formData.isComercializacao
-            ? `
-        <div style="margin-bottom: 20px;">
-          <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">4. Análise de Itens Comercializados</h3>
-          ${
-            formData.itensComerciais.length > 0
-              ? `
-            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-              <thead>
-                <tr style="background-color: #f3f4f6;">
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">NCM</th>
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Valor (R$)</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${formData.itensComerciais
-                  .map(
-                    (item) => `
-                  <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${item.descricao}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${item.ncm}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${item.valor.toFixed(2)}</td>
-                  </tr>
-                `
-                  )
-                  .join("")}
-              </tbody>
-            </table>
-          `
-              : "<p>Nenhum item comercial cadastrado.</p>"
-          }
-        </div>
-        `
-            : ""
-        }
-        
-        <div style="margin-bottom: 20px;">
-          <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">5. Situação das Obrigações Acessórias</h3>
-          ${
-            formData.obrigacoesAcessorias.length > 0
-              ? `
-            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-              <thead>
-                <tr style="background-color: #f3f4f6;">
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Status</th>
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Vencimento</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${formData.obrigacoesAcessorias
-                  .map(
-                    (obrigacao) => `
-                  <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${obrigacao.descricao}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${obrigacao.status}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${new Date(obrigacao.vencimento).toLocaleDateString("pt-BR")}</td>
-                  </tr>
-                `
-                  )
-                  .join("")}
-              </tbody>
-            </table>
-          `
-              : "<p>Nenhuma obrigação acessória cadastrada.</p>"
-          }
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-          <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">6. Parcelamentos</h3>
-          ${
-            formData.parcelamentos.length > 0
-              ? `
-            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-              <thead>
-                <tr style="background-color: #f3f4f6;">
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Valor (R$)</th>
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Parcelas</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${formData.parcelamentos
-                  .map(
-                    (parcelamento) => `
-                  <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${parcelamento.descricao}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${parcelamento.valor.toFixed(2)}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${parcelamento.parcelas}</td>
-                  </tr>
-                `
-                  )
-                  .join("")}
-              </tbody>
-            </table>
-          `
-              : "<p>Nenhum parcelamento cadastrado.</p>"
-          }
-        </div>
-        
-        <div>
-          <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Conclusão</h3>
-          <p>O diagnóstico identificou pontos críticos que necessitam de atenção imediata, 
-          especialmente com relação às obrigações acessórias em atraso. 
-          Recomenda-se a regularização das pendências e a adoção de processos para evitar novos descumprimentos.</p>
-        </div>
-      </div>
-    `;
+    <div style="margin-bottom: 20px;">
+      <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">2. Análise de CNAE e Tributação</h3>
+      <p><strong>Atividade Principal:</strong> ${formData.empresa?.atividade_principal[0]?.code || ""} - 
+      ${formData.empresa?.atividade_principal[0]?.text || ""}</p>
+      <p><strong>Regime Tributário:</strong> ${
+        formData.empresa?.simples?.optante
+          ? "Simples Nacional"
+          : "Lucro Presumido"
+      }</p>
+    </div>
+    
+    ${
+      formData.isPrestadorServico
+        ? `
+    <div style="margin-bottom: 20px;">
+      <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">3. Análise de Notas Fiscais de Serviço</h3>
+      ${
+        formData.notasFiscais.length > 0
+          ? `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr style="background-color: #f3f4f6;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Valor (R$)</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Alíquota (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${formData.notasFiscais
+              .map(
+                (nota) => `
+              <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">${nota.descricao}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${nota.valor.toFixed(2)}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${nota.aliquota}%</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `
+          : "<p>Nenhuma nota fiscal cadastrada.</p>"
+      }
+    </div>
+    `
+        : ""
+    }
+    
+    ${
+      formData.isComercializacao
+        ? `
+    <div style="margin-bottom: 20px;">
+      <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">4. Análise de Tributação de Itens</h3>
+      ${
+        formData.itensTributacao.length > 0
+          ? `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr style="background-color: #f3f4f6;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">NCM</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">ICMS (%)</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Base Legal ICMS</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">PIS/COFINS (%)</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Base Legal PIS/COFINS</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">IPI (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${formData.itensTributacao
+              .map(
+                (item) => `
+              <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.ncm || "-"}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.icms || "0"}%</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.baseLegalIcms || "-"}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.pisCofins || "0"}%</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.baseLegalPisCofins || "-"}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${item.ipi || "0"}%</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `
+          : "<p>Nenhum item de tributação cadastrado.</p>"
+      }
+    </div>
+    `
+        : ""
+    }
+    
+    <div style="margin-bottom: 20px;">
+      <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">5. Situação das Obrigações Acessórias</h3>
+      ${
+        formData.obrigacoesAcessorias.length > 0
+          ? `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr style="background-color: #f3f4f6;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Status</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Vencimento</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${formData.obrigacoesAcessorias
+              .map(
+                (obrigacao) => `
+              <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">${obrigacao.descricao}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${obrigacao.status}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${new Date(obrigacao.vencimento).toLocaleDateString("pt-BR")}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `
+          : "<p>Nenhuma obrigação acessória cadastrada.</p>"
+      }
+    </div>
+    
+    <div style="margin-bottom: 20px;">
+      <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">6. Parcelamentos</h3>
+      ${
+        formData.parcelamentos.length > 0
+          ? `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr style="background-color: #f3f4f6;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descrição</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Valor (R$)</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Parcelas</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${formData.parcelamentos
+              .map(
+                (parcelamento) => `
+              <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">${parcelamento.descricao}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${parcelamento.valor.toFixed(2)}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${parcelamento.parcelas}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `
+          : "<p>Nenhum parcelamento cadastrado.</p>"
+      }
+    </div>
+    
+    <div>
+      <h3 style="color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Conclusão</h3>
+      <p>O diagnóstico identificou pontos críticos que necessitam de atenção imediata, 
+      especialmente com relação às obrigações acessórias em atraso. 
+      Recomenda-se a regularização das pendências e a adoção de processos para evitar novos descumprimentos.</p>
+    </div>
+  </div>
+`;
 
     // Inserir o conteúdo do diagnóstico no documento
     const finalHTML = letterheadHTML.replace(
@@ -741,7 +892,7 @@ const DiagnosticoFiscal = () => {
   };
 
   // Função para salvar o diagnóstico
-  const salvarDiagnostico = () => {
+  const salvarDiagnostico = async () => {
     if (!formData.empresa) {
       toast.error("Dados incompletos", {
         description: "Complete as informações da empresa antes de salvar.",
@@ -749,24 +900,111 @@ const DiagnosticoFiscal = () => {
       return;
     }
 
-    const novoDiagnostico: Diagnostico = {
-      id: Date.now().toString(),
-      data: new Date().toISOString().split("T")[0],
-      cnpj: formData.cnpj,
-      nomeEmpresa: formData.empresa.nome,
-      status: "Concluído",
-    };
+    if (!session?.user.id) {
+      toast.error("Usuário não autenticado", {
+        description: "Faça login para salvar o diagnóstico.",
+      });
+      return;
+    }
 
-    const updatedDiagnosticos = [...diagnosticos, novoDiagnostico];
-    setDiagnosticos(updatedDiagnosticos);
-    localStorage.setItem(
-      "diagnosticosFiscais",
-      JSON.stringify(updatedDiagnosticos)
-    );
+    try {
+      const novoDiagnostico = {
+        data: new Date().toISOString().split("T")[0],
+        cnpj: formData.cnpj,
+        nomeEmpresa: formData.empresa.nome,
+        status: "Concluído",
+        formData: { ...formData },
+        usuarioId: session.user.id,
+      };
 
-    toast.success("Diagnóstico concluído e salvo com sucesso!");
-    setActiveTab("list");
+      const response = await fetch("/api/diagnosticos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(novoDiagnostico),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao salvar diagnóstico");
+      }
+
+      const diagnosticoSalvo = await response.json();
+
+      // Também salvar no localStorage para referência local
+      const savedDiagnosticos = localStorage.getItem("diagnosticosCompletos");
+      const diagnosticosCompletos = savedDiagnosticos
+        ? JSON.parse(savedDiagnosticos)
+        : [];
+      const updatedDiagnosticos = [
+        ...diagnosticosCompletos,
+        { ...novoDiagnostico, id: diagnosticoSalvo.id },
+      ];
+
+      localStorage.setItem(
+        "diagnosticosCompletos",
+        JSON.stringify(updatedDiagnosticos)
+      );
+      setDiagnosticos(updatedDiagnosticos.map(({ formData, ...diag }) => diag));
+
+      toast.success("Diagnóstico concluído e salvo com sucesso!");
+      setActiveTab("list");
+      setViewMode("list");
+    } catch (error) {
+      console.error("Erro ao salvar diagnóstico:", error);
+      toast.error("Erro ao salvar diagnóstico", {
+        description: "Não foi possível salvar no banco de dados.",
+      });
+    }
   };
+
+  // Função para carregar diagnósticos do banco
+  const carregarDiagnosticosDoBanco = async () => {
+    if (!session?.user.id) return;
+
+    try {
+      const response = await fetch(
+        `/api/diagnosticos?usuarioId=${session?.user.id}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Erro ao carregar diagnósticos");
+      }
+
+      const diagnosticosDoBanco = await response.json();
+
+      // Converter para o formato esperado pelo componente
+      const diagnosticosFormatados = diagnosticosDoBanco.map((diag: any) => ({
+        id: diag.id,
+        data: diag.data,
+        cnpj: diag.cnpj,
+        nomeEmpresa: diag.nomeEmpresa,
+        status: diag.status,
+      }));
+
+      setDiagnosticos(diagnosticosFormatados);
+
+      // Também salvar no localStorage para acesso offline
+      localStorage.setItem(
+        "diagnosticosFiscais",
+        JSON.stringify(diagnosticosFormatados)
+      );
+    } catch (error) {
+      console.error("Erro ao carregar diagnósticos:", error);
+      // Fallback para o localStorage se o banco falhar
+      const savedDiagnosticos = localStorage.getItem("diagnosticosFiscais");
+      if (savedDiagnosticos) {
+        setDiagnosticos(JSON.parse(savedDiagnosticos));
+      }
+    }
+  };
+
+  // Chamar a função quando o usuário for carregado
+  useEffect(() => {
+    if (session?.user.id) {
+      carregarDiagnosticosDoBanco();
+    }
+  }, [session?.user.id]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -816,38 +1054,201 @@ const DiagnosticoFiscal = () => {
             <h3 className="text-lg font-semibold">
               Passo 2: Análise das CNAE's
             </h3>
-            {formData.empresa && (
-              <div className="p-4 border rounded-md bg-muted">
-                <h4 className="font-medium mb-2">Dados da Empresa:</h4>
-                <p>
-                  <strong>Razão Social:</strong> {formData.empresa.nome}
-                </p>
-                <p>
-                  <strong>Nome Fantasia:</strong>{" "}
-                  {formData.empresa.fantasia || "Não informado"}
-                </p>
-                <p>
-                  <strong>CNPJ:</strong> {formData.empresa.cnpj}
-                </p>
-                <p>
-                  <strong>Situação:</strong> {formData.empresa.situacao}
-                </p>
 
-                <h4 className="font-medium mt-4 mb-2">Atividade Principal:</h4>
-                <p>
-                  {formData.empresa.atividade_principal[0]?.code} -{" "}
-                  {formData.empresa.atividade_principal[0]?.text}
-                </p>
+            {/* Verificação se formData.empresa existe */}
+            {formData.empresa ? (
+              <>
+                <div className="p-4 border rounded-md bg-muted">
+                  <h4 className="font-medium mb-2">Dados da Empresa:</h4>
+                  <p>
+                    <strong>Razão Social:</strong> {formData.empresa.nome}
+                  </p>
+                  <p>
+                    <strong>Nome Fantasia:</strong>{" "}
+                    {formData.empresa.fantasia || "Não informado"}
+                  </p>
+                  <p>
+                    <strong>CNPJ:</strong> {formData.empresa.cnpj}
+                  </p>
+                  <p>
+                    <strong>Situação:</strong> {formData.empresa.situacao}
+                  </p>
 
-                <h4 className="font-medium mt-4 mb-2">Regime Tributário:</h4>
-                <p>
-                  {formData.empresa.simples.optante
-                    ? "Simples Nacional"
-                    : "Lucro Presumido"}
-                </p>
+                  <h4 className="font-medium mt-4 mb-2">Regime Tributário:</h4>
+                  <p>
+                    {formData.empresa.simples.optante
+                      ? "Simples Nacional"
+                      : "Lucro Presumido"}
+                  </p>
+                </div>
+
+                {/* Análise das CNAEs */}
+                <div className="mt-6">
+                  <h4 className="font-medium mb-4">Atividades Econômicas:</h4>
+
+                  {/* Atividade Principal */}
+                  {formData.empresa.atividade_principal.map(
+                    (atividade, index) => (
+                      <div
+                        key={`principal-${index}`}
+                        className="mb-6 border rounded-lg p-4 bg-card"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary text-primary-foreground">
+                              ATIVIDADE PRINCIPAL
+                            </span>
+                            <h5 className="font-semibold mt-1">
+                              {atividade.code} - {atividade.text}
+                            </h5>
+                          </div>
+                        </div>
+
+                        <Tabs defaultValue="simples" className="w-full">
+                          <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="simples">
+                              Simples Nacional
+                            </TabsTrigger>
+                            <TabsTrigger value="normal">
+                              Regime Normal
+                            </TabsTrigger>
+                          </TabsList>
+
+                          <TabsContent value="simples" className="pt-4">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">
+                                  Pode ser optante:
+                                </p>
+                                <p className="font-medium">Sim</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Anexo:</p>
+                                <p className="font-medium">III</p>
+                              </div>
+                            </div>
+                          </TabsContent>
+
+                          <TabsContent value="normal" className="pt-4">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">
+                                  Presunção IRPJ:
+                                </p>
+                                <p className="font-medium">32%</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">
+                                  Alíquota IRPJ:
+                                </p>
+                                <p className="font-medium">15%</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">
+                                  Presunção CSLL:
+                                </p>
+                                <p className="font-medium">32%</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">
+                                  Alíquota CSLL:
+                                </p>
+                                <p className="font-medium">9%</p>
+                              </div>
+                            </div>
+                          </TabsContent>
+                        </Tabs>
+                      </div>
+                    )
+                  )}
+
+                  {/* Atividades Secundárias */}
+                  {formData.empresa.atividades_secundarias &&
+                    formData.empresa.atividades_secundarias.map(
+                      (atividade, index) => (
+                        <div
+                          key={`secundaria-${index}`}
+                          className="mb-6 border rounded-lg p-4 bg-card"
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+                                ATIVIDADE SECUNDÁRIA
+                              </span>
+                              <h5 className="font-semibold mt-1">
+                                {atividade.code} - {atividade.text}
+                              </h5>
+                            </div>
+                          </div>
+
+                          <Tabs defaultValue="simples" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                              <TabsTrigger value="simples">
+                                Simples Nacional
+                              </TabsTrigger>
+                              <TabsTrigger value="normal">
+                                Regime Normal
+                              </TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="simples" className="pt-4">
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Pode ser optante:
+                                  </p>
+                                  <p className="font-medium">Não</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Anexo:
+                                  </p>
+                                  <p className="font-medium">-</p>
+                                </div>
+                              </div>
+                            </TabsContent>
+
+                            <TabsContent value="normal" className="pt-4">
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Presunção IRPJ:
+                                  </p>
+                                  <p className="font-medium">16%</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Alíquota IRPJ:
+                                  </p>
+                                  <p className="font-medium">15%</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Presunção CSLL:
+                                  </p>
+                                  <p className="font-medium">12%</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Alíquota CSLL:
+                                  </p>
+                                  <p className="font-medium">9%</p>
+                                </div>
+                              </div>
+                            </TabsContent>
+                          </Tabs>
+                        </div>
+                      )
+                    )}
+                </div>
+              </>
+            ) : (
+              <div className="p-4 border rounded-md bg-yellow-50 text-yellow-800">
+                <AlertCircle className="h-5 w-5 inline mr-2" />
+                Nenhuma empresa carregada. Volte ao passo 1 para consultar o
+                CNPJ.
               </div>
             )}
-            <Button onClick={handleNextStep}>Próximo</Button>
           </div>
         );
       case 3:
@@ -874,78 +1275,212 @@ const DiagnosticoFiscal = () => {
 
             {formData.isPrestadorServico && (
               <div className="mt-4">
-                <h4 className="font-medium mb-2">Adicionar Nota Fiscal:</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                  <div>
-                    <Label htmlFor="descricao">Descrição</Label>
+                <h4 className="font-medium mb-2">
+                  Adicionar Nota Fiscal de Serviço:
+                </h4>
+
+                {/* Formulário expandido para nota fiscal de serviço */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                  <div className="md:col-span-2 lg:col-span-3">
+                    <Label htmlFor="descricao">Descrição do Serviço *</Label>
                     <Input
                       id="descricao"
                       value={notaFiscalDescricao}
                       onChange={(e) => setNotaFiscalDescricao(e.target.value)}
-                      placeholder="Descrição do serviço"
+                      placeholder="Descrição detalhada do serviço prestado"
                     />
                   </div>
+
                   <div>
-                    <Label htmlFor="valor">Valor (R$)</Label>
+                    <Label htmlFor="cnae">Código CNAE *</Label>
                     <Input
-                      id="valor"
-                      type="number"
-                      value={notaFiscalValor}
-                      onChange={(e) => setNotaFiscalValor(e.target.value)}
-                      placeholder="0,00"
+                      id="cnae"
+                      value={notaFiscalCnae}
+                      onChange={(e) => setNotaFiscalCnae(e.target.value)}
+                      placeholder="Ex: 62.01-5-00"
                     />
                   </div>
+
                   <div>
-                    <Label htmlFor="aliquota">Alíquota (%)</Label>
+                    <Label htmlFor="codigoServico">
+                      Código Serviço (LC 116/03) *
+                    </Label>
+                    <Input
+                      id="codigoServico"
+                      value={notaFiscalCodigoServico}
+                      onChange={(e) =>
+                        setNotaFiscalCodigoServico(e.target.value)
+                      }
+                      placeholder="Ex: 1.01"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="aliquota">Alíquota ISS (%) *</Label>
                     <Input
                       id="aliquota"
                       type="number"
+                      step="0.01"
                       value={notaFiscalAliquota}
                       onChange={(e) => setNotaFiscalAliquota(e.target.value)}
                       placeholder="0,00"
                     />
                   </div>
                 </div>
-                <Button onClick={adicionarNotaFiscal} className="mb-4">
-                  Adicionar Nota Fiscal
-                </Button>
 
-                {formData.notasFiscais.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="font-medium mb-2">
-                      Notas Fiscais Cadastradas:
-                    </h4>
-                    <div className="border rounded-md">
-                      {formData.notasFiscais.map((nota) => (
-                        <div
-                          key={nota.id}
-                          className="flex justify-between items-center p-3 border-b"
-                        >
+                {/* Seção de Retenções */}
+                <div className="border rounded-md p-4 mb-4">
+                  <h5 className="font-medium mb-3">
+                    Aplicabilidade de Retenções:
+                  </h5>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* IRRF */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={retencoes.irrf}
+                          onChange={(e) =>
+                            setRetencoes({
+                              ...retencoes,
+                              irrf: e.target.checked,
+                            })
+                          }
+                          className="mr-2"
+                        />
+                        IRRF (1.5%)
+                      </Label>
+                      {retencoes.irrf && (
+                        <div className="ml-6 space-y-2">
                           <div>
-                            <p className="font-medium">{nota.descricao}</p>
-                            <p className="text-sm text-muted-foreground">
-                              R$ {nota.valor.toFixed(2)} - {nota.aliquota}%
-                            </p>
+                            <Label htmlFor="irrfBaseLegal">Base legal:</Label>
+                            <Input
+                              id="irrfBaseLegal"
+                              value={retencoes.irrfBaseLegal || ""}
+                              onChange={(e) =>
+                                setRetencoes({
+                                  ...retencoes,
+                                  irrfBaseLegal: e.target.value,
+                                })
+                              }
+                              placeholder="Ex: Art. 30 da IN RFB 1.234/2012"
+                            />
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removerNotaFiscal(nota.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
                         </div>
-                      ))}
+                      )}
+                    </div>
+
+                    {/* CSRF (PIS/COFINS/CSLL) */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={retencoes.csrf}
+                          onChange={(e) =>
+                            setRetencoes({
+                              ...retencoes,
+                              csrf: e.target.checked,
+                            })
+                          }
+                          className="mr-2"
+                        />
+                        CSRF (4.65%)
+                      </Label>
+                      {retencoes.csrf && (
+                        <div className="ml-6 space-y-2">
+                          <div>
+                            <Label htmlFor="csrfBaseLegal">Base legal:</Label>
+                            <Input
+                              id="csrfBaseLegal"
+                              value={retencoes.csrfBaseLegal || ""}
+                              onChange={(e) =>
+                                setRetencoes({
+                                  ...retencoes,
+                                  csrfBaseLegal: e.target.value,
+                                })
+                              }
+                              placeholder="Ex: Art. 30 da IN RFB 1.234/2012"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* INSS */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={retencoes.inss}
+                          onChange={(e) =>
+                            setRetencoes({
+                              ...retencoes,
+                              inss: e.target.checked,
+                            })
+                          }
+                          className="mr-2"
+                        />
+                        INSS (11%)
+                      </Label>
+                      {retencoes.inss && (
+                        <div className="ml-6 space-y-2">
+                          <div>
+                            <Label htmlFor="inssBaseLegal">Base legal:</Label>
+                            <Input
+                              id="inssBaseLegal"
+                              value={retencoes.inssBaseLegal || ""}
+                              onChange={(e) =>
+                                setRetencoes({
+                                  ...retencoes,
+                                  inssBaseLegal: e.target.value,
+                                })
+                              }
+                              placeholder="Ex: Art. 31 da IN RFB 1.234/2012"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ISS */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={retencoes.iss}
+                          onChange={(e) =>
+                            setRetencoes({
+                              ...retencoes,
+                              iss: e.target.checked,
+                            })
+                          }
+                          className="mr-2"
+                        />
+                        ISS Retido na Fonte
+                      </Label>
+                      {retencoes.iss && (
+                        <div className="ml-6 space-y-2">
+                          <div>
+                            <Label htmlFor="issBaseLegal">Base legal:</Label>
+                            <Input
+                              id="issBaseLegal"
+                              value={retencoes.issBaseLegal || ""}
+                              onChange={(e) =>
+                                setRetencoes({
+                                  ...retencoes,
+                                  issBaseLegal: e.target.value,
+                                })
+                              }
+                              placeholder="Ex: Lei Complementar 116/2003"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
-            )}
-
-            {formData.isPrestadorServico !== null && (
-              <Button onClick={handleNextStep} className="mt-4">
-                Próximo
-              </Button>
             )}
           </div>
         );
@@ -955,7 +1490,7 @@ const DiagnosticoFiscal = () => {
             <h3 className="text-lg font-semibold">
               Passo 4: Análise Amostral dos Itens
             </h3>
-            <p>A empresa comercializa ou industrializa produtos?</p>
+            <p>A empresa possui atividade de comércio ou indústria?</p>
             <div className="flex gap-4 mb-6">
               <Button onClick={() => handleAnswer(true, "isComercializacao")}>
                 Sim
@@ -970,79 +1505,154 @@ const DiagnosticoFiscal = () => {
 
             {formData.isComercializacao && (
               <div className="mt-4">
-                <h4 className="font-medium mb-2">Adicionar Item Comercial:</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                  <div>
-                    <Label htmlFor="itemDescricao">Descrição</Label>
-                    <Input
-                      id="itemDescricao"
-                      value={itemComercialDescricao}
-                      onChange={(e) =>
-                        setItemComercialDescricao(e.target.value)
-                      }
-                      placeholder="Descrição do item"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="ncm">NCM</Label>
-                    <Input
-                      id="ncm"
-                      value={itemComercialNCM}
-                      onChange={(e) => setItemComercialNCM(e.target.value)}
-                      placeholder="Código NCM"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="itemValor">Valor (R$)</Label>
-                    <Input
-                      id="itemValor"
-                      type="number"
-                      value={itemComercialValor}
-                      onChange={(e) => setItemComercialValor(e.target.value)}
-                      placeholder="0,00"
-                    />
-                  </div>
-                </div>
-                <Button onClick={adicionarItemComercial} className="mb-4">
-                  Adicionar Item
-                </Button>
+                <h4 className="font-medium mb-4">Tributação dos Itens</h4>
 
-                {formData.itensComerciais.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="font-medium mb-2">
-                      Itens Comerciais Cadastrados:
-                    </h4>
-                    <div className="border rounded-md">
-                      {formData.itensComerciais.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex justify-between items-center p-3 border-b"
-                        >
-                          <div>
-                            <p className="font-medium">{item.descricao}</p>
-                            <p className="text-sm text-muted-foreground">
-                              NCM: {item.ncm} - R$ {item.valor.toFixed(2)}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removerItemComercial(item.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                {/* Tabela de tributação dos itens */}
+                <div className="overflow-x-auto border rounded-lg">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="p-3 text-left text-sm font-semibold">
+                          NCM
+                        </th>
+                        <th className="p-3 text-left text-sm font-semibold">
+                          Tributação ICMS (%)
+                        </th>
+                        <th className="p-3 text-left text-sm font-semibold">
+                          Base Legal ICMS
+                        </th>
+                        <th className="p-3 text-left text-sm font-semibold">
+                          Tributação PIS/COFINS (%)
+                        </th>
+                        <th className="p-3 text-left text-sm font-semibold">
+                          Base Legal PIS/COFINS
+                        </th>
+                        <th className="p-3 text-left text-sm font-semibold">
+                          Tributação IPI (%)
+                        </th>
+                        <th className="p-3 text-left text-sm font-semibold">
+                          Ações
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formData.itensTributacao.map((item, index) => (
+                        <tr key={item.id} className="border-b even:bg-muted/20">
+                          <td className="p-3">
+                            <Input
+                              value={item.ncm}
+                              onChange={(e) =>
+                                atualizarItemTributacao(
+                                  item.id,
+                                  "ncm",
+                                  e.target.value
+                                )
+                              }
+                              className="w-24 text-sm"
+                              placeholder="Ex: 8471.30.19"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.icms || ""}
+                              onChange={(e) =>
+                                atualizarItemTributacao(
+                                  item.id,
+                                  "icms",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="%"
+                              className="w-16 text-sm"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <Input
+                              value={item.baseLegalIcms || ""}
+                              onChange={(e) =>
+                                atualizarItemTributacao(
+                                  item.id,
+                                  "baseLegalIcms",
+                                  e.target.value
+                                )
+                              }
+                              className="text-sm"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.pisCofins || ""}
+                              onChange={(e) =>
+                                atualizarItemTributacao(
+                                  item.id,
+                                  "pisCofins",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="%"
+                              className="w-16 text-sm"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <Input
+                              value={item.baseLegalPisCofins || ""}
+                              onChange={(e) =>
+                                atualizarItemTributacao(
+                                  item.id,
+                                  "baseLegalPisCofins",
+                                  e.target.value
+                                )
+                              }
+                              className="text-sm"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.ipi || ""}
+                              onChange={(e) =>
+                                atualizarItemTributacao(
+                                  item.id,
+                                  "ipi",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="%"
+                              className="w-16 text-sm"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removerItemTributacao(item.id)}
+                              className="h-8 w-8"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
                       ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                    </tbody>
+                  </table>
+                </div>
 
-            {formData.isComercializacao !== null && (
-              <Button onClick={handleNextStep} className="mt-4">
-                Próximo
-              </Button>
+                {/* Botão para adicionar nova linha */}
+                <div className="mt-4">
+                  <Button
+                    onClick={adicionarItemTributacao}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" /> Adicionar Item
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         );
@@ -1057,39 +1667,97 @@ const DiagnosticoFiscal = () => {
               <h4 className="font-medium mb-2">
                 Adicionar Obrigação Acessória:
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                 <div>
-                  <Label htmlFor="obrigacaoDescricao">Descrição</Label>
-                  <Input
+                  <Label htmlFor="obrigacaoDescricao">Descrição *</Label>
+                  <select
                     id="obrigacaoDescricao"
                     value={obrigacaoDescricao}
                     onChange={(e) => setObrigacaoDescricao(e.target.value)}
-                    placeholder="Ex: ECD, ECF, DCTF"
-                  />
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">Selecione a obrigação</option>
+                    <option value="EFD ICMS IPI">EFD ICMS IPI</option>
+                    <option value="DCTF - Declaração de Débitos Tributários Federais">
+                      DCTF - Declaração de Débitos Tributários Federais
+                    </option>
+                    <option value="SPED Contribuições">
+                      SPED Contribuições
+                    </option>
+                    <option value="DEFIS - Declaração de Informações Socioeconômicas e Fiscais">
+                      DEFIS - Declaração de Informações Socioeconômicas e
+                      Fiscais
+                    </option>
+                    <option value="DAPI - Declaração de Apuração de Incentivos Fiscais">
+                      DAPI - Declaração de Apuração de Incentivos Fiscais
+                    </option>
+                    <option value="DIRF - Declaração do Imposto de Renda Retido na Fonte">
+                      DIRF - Declaração do Imposto de Renda Retido na Fonte
+                    </option>
+                    <option value="DIMOB - Declaração de Informações sobre Atividades Imobiliárias">
+                      DIMOB - Declaração de Informações sobre Atividades
+                      Imobiliárias
+                    </option>
+                    <option value="Outra">Outra obrigação</option>
+                  </select>
                 </div>
+
                 <div>
-                  <Label htmlFor="obrigacaoStatus">Status</Label>
+                  <Label htmlFor="obrigacaoStatus">Status *</Label>
                   <select
                     id="obrigacaoStatus"
                     value={obrigacaoStatus}
                     onChange={(e) => setObrigacaoStatus(e.target.value)}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="pendente">Pendente</option>
                     <option value="em-dia">Em dia</option>
-                    <option value="atrasada">Atrasada</option>
+                    <option value="pendente">Pendente</option>
                   </select>
                 </div>
-                <div>
-                  <Label htmlFor="obrigacaoVencimento">Vencimento</Label>
+
+                {/* Campo de competência apenas para status "pendente" */}
+                {obrigacaoStatus === "pendente" && (
+                  <div>
+                    <Label htmlFor="obrigacaoCompetencia">Competência *</Label>
+                    <Input
+                      id="obrigacaoCompetencia"
+                      type="month"
+                      value={obrigacaoCompetencia}
+                      onChange={(e) => setObrigacaoCompetencia(e.target.value)}
+                    />
+                  </div>
+                )}
+                {/* Campo de vencimento apenas para status "pendente" */}
+                {obrigacaoStatus === "pendente" && (
+                  <div>
+                    <Label htmlFor="obrigacaoVencimento">Vencimento *</Label>
+                    <Input
+                      id="obrigacaoVencimento"
+                      type="date"
+                      value={obrigacaoVencimento}
+                      onChange={(e) => setObrigacaoVencimento(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Campo para descrição personalizada se selecionar "Outra" */}
+              {obrigacaoDescricao === "Outra" && (
+                <div className="mb-4">
+                  <Label htmlFor="obrigacaoDescricaoPersonalizada">
+                    Descrição Personalizada *
+                  </Label>
                   <Input
-                    id="obrigacaoVencimento"
-                    type="date"
-                    value={obrigacaoVencimento}
-                    onChange={(e) => setObrigacaoVencimento(e.target.value)}
+                    id="obrigacaoDescricaoPersonalizada"
+                    value={obrigacaoDescricaoPersonalizada}
+                    onChange={(e) =>
+                      setObrigacaoDescricaoPersonalizada(e.target.value)
+                    }
+                    placeholder="Digite o nome da obrigação"
                   />
                 </div>
-              </div>
+              )}
+
               <Button onClick={adicionarObrigacaoAcessoria} className="mb-4">
                 Adicionar Obrigação
               </Button>
@@ -1101,38 +1769,89 @@ const DiagnosticoFiscal = () => {
                   </h4>
                   <div className="border rounded-md">
                     {formData.obrigacoesAcessorias.map((obrigacao) => (
-                      <div
-                        key={obrigacao.id}
-                        className="flex justify-between items-center p-3 border-b"
-                      >
-                        <div>
-                          <p className="font-medium">{obrigacao.descricao}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Status: {obrigacao.status} - Vencimento:{" "}
-                            {new Date(obrigacao.vencimento).toLocaleDateString(
-                              "pt-BR"
-                            )}
-                          </p>
+                      <div key={obrigacao.id} className="p-3 border-b">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-medium">{obrigacao.descricao}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground mt-1">
+                              <div>
+                                <span className="font-semibold">Status:</span>{" "}
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${
+                                    obrigacao.status === "em-dia"
+                                      ? "bg-green-100 text-green-800"
+                                      : obrigacao.status === "pendente"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {obrigacao.status === "em-dia"
+                                    ? "Em dia"
+                                    : obrigacao.status === "pendente"
+                                      ? "Pendente"
+                                      : "Atrasada"}
+                                </span>
+                              </div>
+                              {obrigacao.status === "pendente" && (
+                                <>
+                                  <div>
+                                    <span className="font-semibold">
+                                      Competência:
+                                    </span>{" "}
+                                    {obrigacao.competencia}
+                                  </div>
+                                  <div>
+                                    <span className="font-semibold">
+                                      Vencimento:
+                                    </span>{" "}
+                                    {new Date(
+                                      obrigacao.vencimento
+                                    ).toLocaleDateString("pt-BR")}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              removerObrigacaoAcessoria(obrigacao.id)
+                            }
+                            className="ml-2"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            removerObrigacaoAcessoria(obrigacao.id)
-                          }
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
                       </div>
                     ))}
                   </div>
+
+                  {/* Resumo das obrigações pendentes */}
+                  {formData.obrigacoesAcessorias.some(
+                    (obrigacao) => obrigacao.status === "pendente"
+                  ) && (
+                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <h5 className="font-semibold text-yellow-800 mb-2">
+                        ⚠️ Obrigações Pendentes
+                      </h5>
+                      <ul className="text-sm text-yellow-700 space-y-1">
+                        {formData.obrigacoesAcessorias
+                          .filter(
+                            (obrigacao) => obrigacao.status === "pendente"
+                          )
+                          .map((obrigacao, index) => (
+                            <li key={index}>
+                              • {obrigacao.descricao} - Competência:{" "}
+                              {obrigacao.competencia}
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-
-            <Button onClick={handleNextStep} className="mt-4">
-              Próximo
-            </Button>
           </div>
         );
       case 6:
@@ -1210,10 +1929,6 @@ const DiagnosticoFiscal = () => {
                 </div>
               )}
             </div>
-
-            <Button onClick={handleNextStep} className="mt-4">
-              Concluir Diagnóstico
-            </Button>
           </div>
         );
       default:
@@ -1260,7 +1975,7 @@ const DiagnosticoFiscal = () => {
           )}
         </div>
 
-        {activeTab === "list" ? (
+        {activeTab === "list" && viewMode === "list" ? (
           <Card className="bg-transparent">
             <CardHeader>
               <CardTitle>Diagnósticos Realizados</CardTitle>
@@ -1274,7 +1989,8 @@ const DiagnosticoFiscal = () => {
                   diagnosticos.map((diagnostico) => (
                     <div
                       key={diagnostico.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent dark:hover:bg-accent/20 cursor-pointer"
+                      onClick={() => carregarDiagnostico(diagnostico.id)}
                     >
                       <div className="flex items-center gap-4">
                         <div className="p-2 bg-primary/10 rounded-full">
@@ -1289,15 +2005,37 @@ const DiagnosticoFiscal = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">
-                          {diagnostico.data}
-                        </p>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${diagnostico.status === "Concluído" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">
+                            {diagnostico.data}
+                          </p>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${diagnostico.status === "Concluído" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}
+                          >
+                            {diagnostico.status}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            editarDiagnostico(diagnostico.id);
+                          }}
                         >
-                          {diagnostico.status}
-                        </span>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            excluirDiagnostico(diagnostico.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive hover:bg-transparent" />
+                        </Button>
                       </div>
                     </div>
                   ))
@@ -1312,6 +2050,34 @@ const DiagnosticoFiscal = () => {
                     </p>
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : viewMode === "view" && selectedDiagnostico ? (
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Visualizando Diagnóstico</CardTitle>
+                  <CardDescription>
+                    {selectedDiagnostico.nomeEmpresa} -{" "}
+                    {selectedDiagnostico.cnpj}
+                  </CardDescription>
+                </div>
+                <Button variant="outline" onClick={() => setViewMode("list")}>
+                  Voltar para lista
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Aqui você pode exibir os detalhes completos do diagnóstico */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold">Dados da Empresa</h3>
+                  <p>{selectedDiagnostico.formData.empresa?.nome}</p>
+                  <p>CNPJ: {selectedDiagnostico.formData.cnpj}</p>
+                </div>
+                {/* Adicione mais detalhes do diagnóstico aqui */}
               </div>
             </CardContent>
           </Card>

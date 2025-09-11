@@ -27,6 +27,8 @@ model Usuario {
   BaseLegal BaseLegal[]
 
   Anotacao Anotacao[]
+
+  Diagnostico Diagnostico[]
 }
 
 model Account {
@@ -256,4 +258,6 @@ model Diagnostico {
   nomeEmpresa String
   status      String
   formData    Json
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId   String
 }
