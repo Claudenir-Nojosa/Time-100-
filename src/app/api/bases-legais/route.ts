@@ -14,18 +14,23 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const uf = searchParams.get("uf");
     const usuarioId = searchParams.get("usuarioId");
+    const apenasFavoritos = searchParams.get("apenasFavoritos") === "true";
+    const tags = searchParams.get("tags")?.split(",") || [];
+    const palavraChave = searchParams.get("palavraChave") || "";
+    const tipoTributo = searchParams.get("tipoTributo") || "";
+    const categoria = searchParams.get("categoria") || "";
 
-    console.log("[API BASES LEGAIS] Parâmetros recebidos:", { uf, usuarioId });
+    console.log("[API BASES LEGAIS] Parâmetros recebidos:", {
+      uf,
+      usuarioId,
+      apenasFavoritos,
+      tags,
+      palavraChave,
+      tipoTributo,
+      categoria,
+    });
 
     // Validação dos campos obrigatórios
-    if (!uf) {
-      console.error("[API BASES LEGAIS] UF não especificada");
-      return NextResponse.json(
-        { error: "UF não especificada" },
-        { status: 400 }
-      );
-    }
-
     if (!usuarioId) {
       console.error("[API BASES LEGAIS] ID do usuário não especificado");
       return NextResponse.json(
@@ -52,14 +57,84 @@ export async function GET(request: Request) {
       "[API BASES LEGAIS] Buscando bases legais no banco de dados..."
     );
 
-    // Buscar bases legais do usuário para a UF especificada
+    // Construir condições where - CORREÇÃO AQUI
+    const whereConditions: any = {
+      usuarioId,
+    };
+
+    if (uf) {
+      whereConditions.uf = uf;
+    }
+
+    // CORREÇÃO: Filtro por favoritos - deve ser uma condição separada
+    if (apenasFavoritos) {
+      console.log("[API] Aplicando filtro de favoritos");
+      whereConditions.favoritos = {
+        some: {
+          usuarioId: usuarioId,
+        },
+      };
+    } else {
+      console.log("[API] Sem filtro de favoritos");
+    }
+
+    // CORREÇÃO: Filtro por tags - use hasSome em vez de hasEvery
+    if (tags.length > 0 && tags[0] !== "") {
+      whereConditions.tags = {
+        hasSome: tags,
+      };
+    }
+
+    if (palavraChave) {
+      const keyword = palavraChave.toLowerCase();
+
+      // Cria uma condição OR separada para a busca por palavra-chave
+      const searchConditions: any[] = [
+        { titulo: { contains: keyword, mode: "insensitive" } },
+        { descricao: { contains: keyword, mode: "insensitive" } },
+        { anotacoes: { contains: keyword, mode: "insensitive" } },
+        {
+          ArquivoBaseLegal: {
+            some: {
+              nome: { contains: keyword, mode: "insensitive" },
+            },
+          },
+        },
+      ];
+
+      // Para tags, use arrayContains se for uma tag exata, ou outra lógica
+      searchConditions.push({
+        tags: {
+          hasSome: [keyword], // Isso busca tags que contenham a palavra-chave
+        },
+      });
+
+      // Adicione as condições de busca ao whereConditions
+      whereConditions.AND = [
+        ...(whereConditions.AND || []),
+        { OR: searchConditions },
+      ];
+    }
+    if (tipoTributo) {
+      whereConditions.tipoTributo = tipoTributo;
+    }
+
+    if (categoria) {
+      whereConditions.categoria = categoria;
+    }
+
+    console.log("[API BASES LEGAIS] Condições WHERE:", whereConditions);
+
+    // Buscar bases legais com filtros
     const basesLegais = await prisma.baseLegal.findMany({
-      where: {
-        uf,
-        usuarioId,
-      },
+      where: whereConditions,
       include: {
-        ArquivoBaseLegal: true, // Incluir arquivos
+        ArquivoBaseLegal: true,
+        favoritos: {
+          where: {
+            usuarioId: usuarioId,
+          },
+        },
       },
       orderBy: {
         dataPublicacao: "desc",
@@ -70,6 +145,16 @@ export async function GET(request: Request) {
       "[API BASES LEGAIS] Bases legais encontradas:",
       basesLegais.length
     );
+
+    // DEBUG: Verificar se os favoritos estão sendo incluídos
+    basesLegais.forEach((base, index) => {
+      console.log(`[DEBUG] Base ${index + 1}:`, {
+        id: base.id,
+        titulo: base.titulo,
+        favoritosCount: base.favoritos.length,
+        hasFavorito: base.favoritos.length > 0,
+      });
+    });
 
     return NextResponse.json(basesLegais);
   } catch (error: any) {
@@ -96,7 +181,7 @@ export async function POST(request: NextRequest) {
     );
 
     const formData = await request.formData();
-    
+
     // Debug: verificar todos os campos recebidos
     const allFields: Record<string, any> = {};
     for (const [key, value] of formData.entries()) {

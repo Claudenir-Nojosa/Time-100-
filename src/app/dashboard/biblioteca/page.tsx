@@ -41,8 +41,20 @@ import {
   Upload,
   X,
   Eye,
+  Filter,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 
 // Definição da interface para BaseLegal
 interface ArquivoBaseLegal {
@@ -67,7 +79,8 @@ interface BaseLegal {
   tipoTributo: string;
   status: string;
   anotacoes: string;
-  ArquivoBaseLegal: ArquivoBaseLegal[]; // Agora é um array de objetos
+  ArquivoBaseLegal: ArquivoBaseLegal[];
+  favoritos: BaseLegalFavorito[]; // Adicione esta linha
 }
 
 // Definição da interface para Anotacao
@@ -78,6 +91,13 @@ interface Anotacao {
   usuarioId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface BaseLegalFavorito {
+  id: string;
+  baseLegalId: string;
+  usuarioId: string;
+  createdAt: string;
 }
 
 // Definição das UFs brasileiras
@@ -140,6 +160,7 @@ const categoriasBaseLegal = [
 
 export default function BibliotecaPage() {
   const { data: session, status } = useSession();
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const router = useRouter();
   const [editandoBaseLegal, setEditandoBaseLegal] = useState<BaseLegal | null>(
     null
@@ -158,6 +179,17 @@ export default function BibliotecaPage() {
   const [novaTag, setNovaTag] = useState("");
   const [arquivos, setArquivos] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [filtroAberto, setFiltroAberto] = useState(false);
+  const [filtros, setFiltros] = useState({
+    apenasFavoritos: false,
+    tags: [] as string[],
+    palavraChave: "",
+    tipoTributo: "",
+    categoria: "",
+    uf: "",
+  });
+  const [todasTags, setTodasTags] = useState<string[]>([]);
+  const [basesFiltradas, setBasesFiltradas] = useState<BaseLegal[]>([]);
 
   const [novaBaseLegal, setNovaBaseLegal] = useState({
     titulo: "",
@@ -186,6 +218,18 @@ export default function BibliotecaPage() {
       uf: ufSelecionada || "",
     }));
   }, [ufSelecionada]);
+
+  const carregarTodasTags = async () => {
+    try {
+      const response = await fetch("/api/bases-legais/tags");
+      if (response.ok) {
+        const tags = await response.json();
+        setTodasTags(tags);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar tags:", error);
+    }
+  };
 
   // Adicione estas funções no componente principal
   const handleEditarBaseLegal = (base: BaseLegal) => {
@@ -312,13 +356,27 @@ export default function BibliotecaPage() {
     if (!session) return;
     try {
       setCarregando(true);
-      const response = await fetch(
-        `/api/bases-legais?uf=${ufSelecionada}&usuarioId=${session.user.id}`
-      );
+
+      // Use o estado atual de filtros
+      const params = new URLSearchParams({
+        usuarioId: session.user.id,
+        uf: ufSelecionada,
+        apenasFavoritos: filtros.apenasFavoritos.toString(),
+        tags: filtros.tags.join(","),
+        palavraChave: filtros.palavraChave,
+        tipoTributo: filtros.tipoTributo,
+        categoria: filtros.categoria,
+      });
+
+      console.log("Carregando bases com filtros:", params.toString());
+
+      const response = await fetch(`/api/bases-legais?${params}`);
+
       if (response.ok) {
         const data = await response.json();
-        console.log("Bases legais carregadas:", data);
+        console.log("Bases carregadas:", data.length);
         setBasesLegais(data);
+        setBasesFiltradas(data); // API já filtra, então ambas são iguais
       } else {
         console.error("Erro ao carregar bases legais");
       }
@@ -328,7 +386,129 @@ export default function BibliotecaPage() {
       setCarregando(false);
     }
   };
+  const aplicarFiltros = (bases: BaseLegal[]) => {
+    let filtered = bases;
 
+    // Filtro por tags
+    if (filtros.tags.length > 0) {
+      filtered = filtered.filter((base) =>
+        filtros.tags.every((tag) => base.tags.includes(tag))
+      );
+    }
+
+    // Filtro por palavra-chave
+    if (filtros.palavraChave) {
+      const keyword = filtros.palavraChave.toLowerCase();
+      filtered = filtered.filter(
+        (base) =>
+          base.titulo.toLowerCase().includes(keyword) ||
+          base.descricao?.toLowerCase().includes(keyword) ||
+          base.anotacoes?.toLowerCase().includes(keyword) ||
+          base.tags.some((tag) => tag.toLowerCase().includes(keyword))
+      );
+    }
+
+    // Filtros adicionais
+    if (filtros.tipoTributo) {
+      filtered = filtered.filter(
+        (base) => base.tipoTributo === filtros.tipoTributo
+      );
+    }
+
+    if (filtros.categoria) {
+      filtered = filtered.filter(
+        (base) => base.categoria === filtros.categoria
+      );
+    }
+
+    if (filtros.uf) {
+      filtered = filtered.filter((base) => base.uf === filtros.uf);
+    }
+
+    setBasesFiltradas(filtered);
+  };
+
+  const toggleFavorito = async (baseLegal: BaseLegal) => {
+    if (!session) return;
+
+    try {
+      const response = await fetch("/api/bases-legais/favoritos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          baseLegalId: baseLegal.id,
+          usuarioId: session.user.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Atualizar a lista de bases legais
+        carregarBasesLegais();
+        toast.success(
+          result.favoritado
+            ? "Adicionado aos favoritos!"
+            : "Removido dos favoritos!"
+        );
+      } else {
+        console.error("Erro ao atualizar favorito:", result.error);
+        toast.error("Erro ao atualizar favorito");
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar favorito:", error);
+      toast.error("Erro ao atualizar favorito");
+    }
+  };
+
+  const aplicarFiltrosAutomaticos = (filtrosAtuais: typeof filtros) => {
+    console.log("Aplicando filtros automáticos:", filtrosAtuais);
+    carregarBasesLegais();
+  };
+
+  const handleFiltroChange = (novosFiltros: Partial<typeof filtros>) => {
+    setFiltros((prev) => ({ ...prev, ...novosFiltros }));
+  };
+  useEffect(() => {
+    if (ufSelecionada && session) {
+      // Para palavra-chave, adicione um debounce para evitar muitas requests
+      const timeoutId = setTimeout(() => {
+        aplicarFiltrosAutomaticos(filtros);
+      }, 500); // 500ms de debounce
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [
+    filtros.apenasFavoritos,
+    filtros.tipoTributo,
+    filtros.categoria,
+    filtros.uf,
+    filtros.palavraChave,
+    ufSelecionada,
+    session,
+  ]);
+  // Remova o useEffect para filtros locais ou atualize para não incluir palavra-chave
+  useEffect(() => {
+    if (basesLegais.length > 0) {
+      // Apenas tags são filtros locais agora
+      aplicarFiltrosLocais(basesLegais);
+    }
+  }, [filtros.tags, basesLegais]);
+  // Crie uma função separada para filtros locais (apenas tags)
+  const aplicarFiltrosLocais = (bases: BaseLegal[]) => {
+    let filtered = bases;
+
+    // Apenas filtro de tags (local)
+    if (filtros.tags.length > 0) {
+      filtered = filtered.filter((base) =>
+        filtros.tags.every((tag) => base.tags.includes(tag))
+      );
+    }
+
+    setBasesFiltradas(filtered);
+  };
   const handleSelecionarUF = (uf: string) => {
     setUfSelecionada(uf);
   };
@@ -348,6 +528,21 @@ export default function BibliotecaPage() {
       ...novaBaseLegal,
       tags: novaBaseLegal.tags.filter((tag) => tag !== tagToRemove),
     });
+  };
+
+  const aplicarFiltrosDrawer = () => {
+    // Recarrega da API quando filtros principais mudam
+    if (
+      filtros.apenasFavoritos ||
+      filtros.tipoTributo ||
+      filtros.categoria ||
+      filtros.uf
+    ) {
+      carregarBasesLegais();
+    } else {
+      // Aplica apenas filtros locais (tags e palavra-chave)
+      aplicarFiltros(basesLegais);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1019,7 +1214,23 @@ export default function BibliotecaPage() {
                 }
               </h2>
             </div>
-
+            <Button
+              variant="outline"
+              onClick={() => setMostrarFiltros(!mostrarFiltros)}
+              className=" ml-[600px]"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filtros
+              {(filtros.apenasFavoritos ||
+                filtros.tags.length > 0 ||
+                filtros.palavraChave ||
+                filtros.tipoTributo ||
+                filtros.categoria) && (
+                <span className="ml-2 bg-primary text-primary-foreground rounded-full h-5 w-5 text-xs flex items-center justify-center">
+                  !
+                </span>
+              )}
+            </Button>
             <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
               <DialogTrigger asChild>
                 <Button>
@@ -1364,7 +1575,229 @@ export default function BibliotecaPage() {
               </DialogContent>
             </Dialog>
           </div>
+          <div className="mb-4">
+            {/* Área de filtros (mostra/oculta) */}
+            {mostrarFiltros && (
+              <div className="p-4 border rounded-lg mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  {/* Filtro de favoritos */}
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="apenasFavoritos"
+                      checked={filtros.apenasFavoritos}
+                      onChange={(e) =>
+                        handleFiltroChange({
+                          apenasFavoritos: e.target.checked,
+                        })
+                      }
+                      className="h-4 w-4"
+                    />
+                    <Label
+                      htmlFor="apenasFavoritos"
+                      className="text-sm font-medium"
+                    >
+                      Apenas favoritos
+                    </Label>
+                  </div>
 
+                  {/* Campo de busca */}
+                  <div>
+                    <Label
+                      htmlFor="palavraChave"
+                      className="text-sm font-medium"
+                    >
+                      Palavra-chave
+                    </Label>
+                    <Input
+                      id="palavraChave"
+                      value={filtros.palavraChave}
+                      onChange={(e) =>
+                        handleFiltroChange({
+                          palavraChave: e.target.value,
+                        })
+                      }
+                      placeholder="Buscar em título, descrição..."
+                      className="mt-1"
+                    />
+                  </div>
+
+                  {/* Filtro de tipo de tributo */}
+                  <div>
+                    <Label
+                      htmlFor="tipoTributo"
+                      className="text-sm font-medium"
+                    >
+                      Tipo de Tributo
+                    </Label>
+                    <select
+                      id="tipoTributo"
+                      value={filtros.tipoTributo}
+                      onChange={(e) =>
+                        handleFiltroChange({
+                          tipoTributo: e.target.value,
+                        })
+                      }
+                      className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Todos os tributos</option>
+                      {tiposTributo.map((tipo) => (
+                        <option key={tipo} value={tipo}>
+                          {tipo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Filtro de categoria */}
+                  <div>
+                    <Label htmlFor="categoria" className="text-sm font-medium">
+                      Categoria
+                    </Label>
+                    <select
+                      id="categoria"
+                      value={filtros.categoria}
+                      onChange={(e) =>
+                        handleFiltroChange({
+                          categoria: e.target.value,
+                        })
+                      }
+                      className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Todas categorias</option>
+                      {categoriasBaseLegal.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Filtro de tags */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Tags</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {todasTags.map((tag) => (
+                      <Button
+                        key={tag}
+                        type="button"
+                        variant={
+                          filtros.tags.includes(tag) ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => {
+                          const novasTags = filtros.tags.includes(tag)
+                            ? filtros.tags.filter((t) => t !== tag)
+                            : [...filtros.tags, tag];
+                          handleFiltroChange({ tags: novasTags });
+                        }}
+                        className="text-xs h-8 px-3"
+                      >
+                        {tag}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Botões de ação */}
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      handleFiltroChange({
+                        apenasFavoritos: false,
+                        tags: [],
+                        palavraChave: "",
+                        tipoTributo: "",
+                        categoria: "",
+                        uf: "",
+                      })
+                    }
+                  >
+                    Limpar Filtros
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Mostra filtros ativos */}
+            {(filtros.apenasFavoritos ||
+              filtros.tags.length > 0 ||
+              filtros.palavraChave ||
+              filtros.tipoTributo ||
+              filtros.categoria) && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {filtros.apenasFavoritos && (
+                  <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                    Favoritos
+                    <button
+                      onClick={() =>
+                        handleFiltroChange({ apenasFavoritos: false })
+                      }
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+
+                {filtros.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full"
+                  >
+                    {tag}
+                    <button
+                      onClick={() => {
+                        const novasTags = filtros.tags.filter((t) => t !== tag);
+                        handleFiltroChange({ tags: novasTags });
+                      }}
+                      className="text-green-600 hover:text-green-800"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+
+                {filtros.palavraChave && (
+                  <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
+                    "{filtros.palavraChave}"
+                    <button
+                      onClick={() => handleFiltroChange({ palavraChave: "" })}
+                      className="text-purple-600 hover:text-purple-800"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+
+                {filtros.tipoTributo && (
+                  <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">
+                    {filtros.tipoTributo}
+                    <button
+                      onClick={() => handleFiltroChange({ tipoTributo: "" })}
+                      className="text-orange-600 hover:text-orange-800"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+
+                {filtros.categoria && (
+                  <span className="inline-flex items-center gap-1 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
+                    {filtros.categoria}
+                    <button
+                      onClick={() => handleFiltroChange({ categoria: "" })}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
           {/* Preview Dialog */}
           <Dialog open={previewAberto} onOpenChange={setPreviewAberto}>
             <DialogContent className="sm:max-w-[600px]">
@@ -1441,36 +1874,58 @@ export default function BibliotecaPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {basesLegais.length > 0 ? (
-                basesLegais.map((base) => (
+              {basesFiltradas.length > 0 ? (
+                basesFiltradas.map((base) => (
                   <Card key={base.id} className="p-6 relative">
-                    {" "}
-                    {/* Adicione relative aqui */}
-                    {/* BOTÕES DE AÇÃO - NOVO CÓDIGO */}
+                    {/* Botão de favorito */}
                     <div className="absolute top-2 right-4 flex gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleEditarBaseLegal(base)}
-                        className="h-8 w-8 text-blue-300 hover:text-blue-100 hover:bg-transparent"
-                        title="Editar base legal"
+                        onClick={() => toggleFavorito(base)}
+                        className="h-8 w-8 text-yellow-400 hover:text-yellow-600 hover:bg-transparent"
+                        title={
+                          base.favoritos?.some(
+                            (f: BaseLegalFavorito) =>
+                              f.usuarioId === session?.user.id
+                          )
+                            ? "Remover dos favoritos"
+                            : "Adicionar aos favoritos"
+                        }
                       >
-                        <Edit className="h-4 w-4" />
+                        {base.favoritos?.some(
+                          (f: BaseLegalFavorito) =>
+                            f.usuarioId === session?.user.id
+                        ) ? (
+                          <Star className="h-4 w-4 fill-current" />
+                        ) : (
+                          <Star className="h-4 w-4" />
+                        )}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleExcluirBaseLegal(base)}
-                        className="h-8 w-8 text-red-300 hover:text-red-100 hover:bg-transparent"
-                        title="Excluir base legal"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="absolute top-2 right-4 flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditarBaseLegal(base)}
+                          className="h-8 w-8 text-blue-300 hover:text-blue-100 hover:bg-transparent"
+                          title="Editar base legal"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleExcluirBaseLegal(base)}
+                          className="h-8 w-8 text-red-300 hover:text-red-100 hover:bg-transparent"
+                          title="Excluir base legal"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="flex justify-between items-start">
                       <div className="flex-1 pr-16">
                         {" "}
-                        {/* Adicione pr-16 para dar espaço aos botões */}
                         <h3 className="text-xl font-semibold">{base.titulo}</h3>
                         {base.categoria && (
                           <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mt-2">
@@ -1514,7 +1969,9 @@ export default function BibliotecaPage() {
               ) : (
                 <div className="text-center py-10 border rounded-lg">
                   <p className="text-gray-500">
-                    Nenhuma base legal encontrada para esta UF.
+                    {basesLegais.length === 0
+                      ? "Nenhuma base legal encontrada para esta UF."
+                      : "Nenhuma base legal corresponde aos filtros aplicados."}
                   </p>
                   <Button
                     onClick={() => setDialogAberto(true)}
