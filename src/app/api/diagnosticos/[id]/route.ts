@@ -3,13 +3,15 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Correção: Receber o params diretamente no primeiro argumento
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// Interface para o contexto
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
+// Forma correta para Next.js 13.2+
+export async function GET(request: NextRequest, context: RouteContext) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
 
     const diagnostico = await prisma.diagnostico.findUnique({
       where: { id },
@@ -32,13 +34,10 @@ export async function GET(
   }
 }
 
-// Correção: Mesma assinatura para DELETE
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// Forma correta para Next.js 13.2+
+export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
 
     await prisma.diagnostico.delete({
       where: { id },
