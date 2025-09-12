@@ -78,11 +78,11 @@ interface BaseLegal {
   tags: string[];
   tipoTributo: string;
   status: string;
-  anotacoes: string;
+  anotacoes: string; // Campo de anotações iniciais (string)
   ArquivoBaseLegal: ArquivoBaseLegal[];
-  favoritos: BaseLegalFavorito[]; // Adicione esta linha
+  favoritos: BaseLegalFavorito[];
+  Anotacao: Anotacao[]; // Adicione esta linha - array de anotações do usuário
 }
-
 // Definição da interface para Anotacao
 interface Anotacao {
   id: string;
@@ -500,11 +500,30 @@ export default function BibliotecaPage() {
   const aplicarFiltrosLocais = (bases: BaseLegal[]) => {
     let filtered = bases;
 
-    // Apenas filtro de tags (local)
+    // Filtro de tags
     if (filtros.tags.length > 0) {
       filtered = filtered.filter((base) =>
         filtros.tags.every((tag) => base.tags.includes(tag))
       );
+    }
+
+    // Filtro de palavra-chave (local) - INCLUI ANOTAÇÕES
+    if (filtros.palavraChave) {
+      const keyword = filtros.palavraChave.toLowerCase();
+      filtered = filtered.filter((base) => {
+        return (
+          // Campos principais
+          base.titulo.toLowerCase().includes(keyword) ||
+          base.descricao?.toLowerCase().includes(keyword) ||
+          base.anotacoes?.toLowerCase().includes(keyword) || // Anotações iniciais (string)
+          base.tags.some((tag) => tag.toLowerCase().includes(keyword)) ||
+          // Anotações do usuário (array de objetos Anotacao)
+          (base.Anotacao &&
+            base.Anotacao.some((anotacao) =>
+              anotacao.conteudo.toLowerCase().includes(keyword)
+            ))
+        );
+      });
     }
 
     setBasesFiltradas(filtered);

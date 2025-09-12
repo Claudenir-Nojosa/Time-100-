@@ -88,11 +88,10 @@ export async function GET(request: Request) {
     if (palavraChave) {
       const keyword = palavraChave.toLowerCase();
 
-      // Cria uma condição OR separada para a busca por palavra-chave
       const searchConditions: any[] = [
         { titulo: { contains: keyword, mode: "insensitive" } },
         { descricao: { contains: keyword, mode: "insensitive" } },
-        { anotacoes: { contains: keyword, mode: "insensitive" } },
+        { anotacoes: { contains: keyword, mode: "insensitive" } }, // Campo anotacoes da base legal
         {
           ArquivoBaseLegal: {
             some: {
@@ -100,16 +99,24 @@ export async function GET(request: Request) {
             },
           },
         },
+        {
+          tags: {
+            hasSome: [keyword],
+          },
+        },
+        // ADICIONE ESTA CONDIÇÃO PARA BUSCAR NAS ANOTAÇÕES DO USUÁRIO
+        {
+          Anotacao: {
+            some: {
+              conteudo: {
+                contains: keyword,
+                mode: "insensitive",
+              },
+            },
+          },
+        },
       ];
 
-      // Para tags, use arrayContains se for uma tag exata, ou outra lógica
-      searchConditions.push({
-        tags: {
-          hasSome: [keyword], // Isso busca tags que contenham a palavra-chave
-        },
-      });
-
-      // Adicione as condições de busca ao whereConditions
       whereConditions.AND = [
         ...(whereConditions.AND || []),
         { OR: searchConditions },
@@ -126,6 +133,7 @@ export async function GET(request: Request) {
     console.log("[API BASES LEGAIS] Condições WHERE:", whereConditions);
 
     // Buscar bases legais com filtros
+    // Atualize o include para trazer o conteúdo das anotações
     const basesLegais = await prisma.baseLegal.findMany({
       where: whereConditions,
       include: {
@@ -133,6 +141,17 @@ export async function GET(request: Request) {
         favoritos: {
           where: {
             usuarioId: usuarioId,
+          },
+        },
+        Anotacao: {
+          where: {
+            usuarioId: usuarioId,
+          },
+          select: {
+            id: true,
+            conteudo: true, // IMPORTANTE: trazer o conteúdo
+            createdAt: true,
+            updatedAt: true,
           },
         },
       },
