@@ -43,6 +43,7 @@ import {
   Eye,
   Filter,
   Star,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -160,6 +161,7 @@ const categoriasBaseLegal = [
 
 export default function BibliotecaPage() {
   const { data: session, status } = useSession();
+  const [mostrarBases, setMostrarBases] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const router = useRouter();
   const [editandoBaseLegal, setEditandoBaseLegal] = useState<BaseLegal | null>(
@@ -1161,6 +1163,29 @@ export default function BibliotecaPage() {
                 <Filter className="h-4 w-4 mr-2" />
                 {mostrarFiltros ? "Ocultar Filtros" : "Mostrar Filtros"}
               </Button>
+              <Button
+                variant={mostrarBases ? "secondary" : "default"}
+                onClick={() => setMostrarBases(!mostrarBases)}
+                disabled={basesFiltradas.length === 0}
+                className="flex items-center"
+              >
+                {mostrarBases ? (
+                  <>
+                    <EyeOff className="h-4 w-4 mr-2" />
+                    Ocultar Bases
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Mostrar Bases
+                  </>
+                )}
+                {basesFiltradas.length > 0 && (
+                  <span className="ml-2 bg-primary-foreground text-primary rounded-full h-5 w-5 text-xs flex items-center justify-center">
+                    {basesFiltradas.length}
+                  </span>
+                )}
+              </Button>
             </div>
 
             {mostrarFiltros && (
@@ -1386,16 +1411,45 @@ export default function BibliotecaPage() {
           </div>
 
           {/* LISTA DE BASES FILTRADAS (TODAS UFs) */}
-          {basesFiltradas.length > 0 && (
+          {mostrarBases && basesFiltradas.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-xl font-semibold mb-4">
-                Bases Encontradas ({basesFiltradas.length})
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold">
+                  Bases Encontradas ({basesFiltradas.length})
+                </h3>
+              </div>
               <div className="space-y-4">
                 {basesFiltradas.map((base) => (
                   <Card key={base.id} className="p-6 relative">
+                    {/* Botão de favorito */}
+                    <div className="absolute top-0 left-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => toggleFavorito(base)}
+                        className="h-8 w-8 text-yellow-400 hover:text-yellow-600 hover:bg-transparent"
+                        title={
+                          base.favoritos?.some(
+                            (f: BaseLegalFavorito) =>
+                              f.usuarioId === session?.user.id
+                          )
+                            ? "Remover dos favoritos"
+                            : "Adicionar aos favoritos"
+                        }
+                      >
+                        {base.favoritos?.some(
+                          (f: BaseLegalFavorito) =>
+                            f.usuarioId === session?.user.id
+                        ) ? (
+                          <Star className="h-4 w-4 fill-current" />
+                        ) : (
+                          <Star className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+
                     <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                      <div className="flex-1 pr-12">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
                             {base.uf}
@@ -1403,6 +1457,11 @@ export default function BibliotecaPage() {
                           {base.categoria && (
                             <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                               {base.categoria}
+                            </span>
+                          )}
+                          {base.tipoTributo && (
+                            <span className="inline-block bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
+                              {base.tipoTributo}
                             </span>
                           )}
                         </div>
@@ -1414,10 +1473,27 @@ export default function BibliotecaPage() {
                             "pt-BR"
                           )}
                         </div>
+
+                        {/* Tags */}
+                        {base.tags.length > 0 && (
+                          <div className="mt-2">
+                            <div className="flex flex-wrap gap-1">
+                              {base.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <Button
                         variant="outline"
                         onClick={() => handleSelecionarUF(base.uf)}
+                        className="ml-4"
                       >
                         Ver mais de {base.uf}
                       </Button>
@@ -1425,6 +1501,29 @@ export default function BibliotecaPage() {
                   </Card>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Mensagem quando não há bases */}
+          {mostrarBases && basesFiltradas.length === 0 && (
+            <div className="text-center py-10 border rounded-lg mb-6">
+              <p className="text-gray-500 mb-4">
+                Nenhuma base legal encontrada com os filtros aplicados.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  handleFiltroChange({
+                    apenasFavoritos: false,
+                    tags: [],
+                    palavraChave: "",
+                    tipoTributo: "",
+                    categoria: "",
+                  });
+                }}
+              >
+                Limpar Filtros
+              </Button>
             </div>
           )}
 
