@@ -231,13 +231,13 @@ export default function Sidebar() {
           </li>
           <li>
             <Link
-              href="/dashboard/emails"
+              href="/dashboard/analises"
               className={`flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 ${
                 isCollapsed ? "justify-center" : ""
               }`}
             >
               <Mails className="h-5 w-5" />
-              {!isCollapsed && <span className="ml-2">E-mails</span>}
+              {!isCollapsed && <span className="ml-2">Análises</span>}
             </Link>
           </li>
           <li>

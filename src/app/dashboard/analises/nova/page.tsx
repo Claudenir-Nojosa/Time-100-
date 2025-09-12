@@ -75,11 +75,18 @@ type DadosApuracao = {
 
 export default function EmailsPage() {
   const { data: session, status } = useSession();
+  const [meses, setMeses] = useState<Array<{ value: string; label: string }>>(
+    []
+  );
+  const [novoMes, setNovoMes] = useState("");
+  const [novoAno, setNovoAno] = useState("");
+  const [mesSelecionado, setMesSelecionado] = useState("");
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [empresaSelecionada, setEmpresaSelecionada] = useState<string>("");
   const [atividadesSelecionadas, setAtividadesSelecionadas] = useState<
     Atividade[]
   >([]);
+  const [mesReferenciaSelecionado, setMesReferenciaSelecionado] = useState("");
   const [dadosApuracao, setDadosApuracao] = useState<DadosApuracao[]>([]);
   const [analise, setAnalise] = useState<string>("");
   const [carregandoAnalise, setCarregandoAnalise] = useState<boolean>(false);
@@ -90,9 +97,67 @@ export default function EmailsPage() {
   >([]);
   const [mostrarHistorico, setMostrarHistorico] = useState(false);
 
+  // Gerar lista de meses disponíveis
+  const mesesDoAno = [
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+  ];
+
+  const anosDisponiveis = ["2023", "2024", "2025", "2026"];
+
+  const adicionarMes = () => {
+    if (!novoMes || !novoAno) {
+      toast.error("Selecione o mês e ano");
+      return;
+    }
+
+    const mesValue = `${novoMes.toLowerCase()}-${novoAno}`;
+    const mesLabel = `${novoMes}/${novoAno}`;
+
+    if (meses.some((m) => m.value === mesValue)) {
+      toast.error("Mês já adicionado");
+      return;
+    }
+
+    setMeses((prev) => [...prev, { value: mesValue, label: mesLabel }]);
+
+    // Definir automaticamente o mês de referência se for o primeiro mês adicionado
+    if (meses.length === 0) {
+      setMesSelecionado(mesValue);
+      setMesReferenciaSelecionado(mesValue);
+    }
+
+    setNovoMes("");
+    setNovoAno("");
+    toast.success("Mês adicionado com sucesso!");
+  };
+
+  const removerMes = (mesValue: string) => {
+    setMeses((prev) => prev.filter((m) => m.value !== mesValue));
+    // Remover também os dados de apuração desse mês
+    setDadosApuracao((prev) => prev.filter((d) => d.mes !== mesValue));
+    toast.success("Mês removido com sucesso!");
+  };
+
   const gerarAnaliseTributaria = async () => {
     if (!empresaSelecionada) {
       toast.error("Selecione uma empresa primeiro");
+      return;
+    }
+
+    // Verificar se há dados de apuração
+    if (dadosApuracao.length === 0 || meses.length === 0) {
+      toast.error("Adicione e preencha os dados dos meses primeiro");
       return;
     }
 
@@ -102,47 +167,182 @@ export default function EmailsPage() {
       const empresa = empresas.find((e) => e.id === empresaSelecionada);
       if (!empresa) return;
 
-      // Prompt SIMPLIFICADO para teste
+      // Usar os meses da lista em vez de dadosApuracao para evitar undefined
+      const primeiroMes = meses[0]?.label || "Mês inicial";
+      const ultimoMes = meses[meses.length - 1]?.label || "Mês final";
+
+      // Calcular totais para análise
+      const totaisMensais = dadosApuracao.map((dados, index) => {
+        const faturamentoTotal =
+          (dados.faturamento.comercio || 0) +
+          (dados.faturamento.industria || 0) +
+          (dados.faturamento.servicos || 0);
+
+        const impostosTotal =
+          (dados.impostos.simples || 0) +
+          (dados.impostos.icms || 0) +
+          (dados.impostos.pis || 0) +
+          (dados.impostos.cofins || 0) +
+          (dados.impostos.ipi || 0) +
+          (dados.impostos.iss || 0);
+
+        return {
+          mes: dados.mes,
+          faturamentoTotal,
+          impostosTotal,
+          totalCompras: dados.totalCompras || 0,
+        };
+      });
+
+      // Gerar prompt focado na análise financeira e tributária em formato de e-mail
       const prompt = `
+Gere uma análise financeira e tributária detalhada em formato de E-MAIL FORMAL para envio ao cliente.
+
+DESTINATÁRIO: ${empresa.razaoSocial}
+CONTATO: ${empresa.responsavel}
+ASSUNTO: Análise Financeira e Tributária - Período de ${primeiroMes} a ${ultimoMes}
+
+DADOS PARA ANÁLISE:
+
 EMPRESA: ${empresa.razaoSocial}
-REGIME: ${formatarRegimeTributario(empresa.regimeTributacao)}
+CNPJ: ${empresa.cnpj}
 UF: ${empresa.uf}
+REGIME TRIBUTÁRIO: ${formatarRegimeTributario(empresa.regimeTributacao)}
+ATIVIDADES: ${atividadesSelecionadas.join(", ")}
 
-ANÁLISE RÁPIDA: Forneça uma análise tributária resumida em 5 linhas sobre o regime ${formatarRegimeTributario(empresa.regimeTributacao)} no estado ${empresa.uf}.
+DADOS DOS ÚLTIMOS MESES (${meses.length} meses):
+${dadosApuracao
+  .map((dados, index) => {
+    const total = totaisMensais[index];
+    const mesLabel =
+      meses.find((m) => m.value === dados.mes)?.label || dados.mes;
+
+    return `
+MÊS: ${mesLabel.toUpperCase()}
+FATURAMENTO:
+${dados.faturamento.comercio ? `- Comércio: R$ ${dados.faturamento.comercio.toFixed(2)}` : ""}
+${dados.faturamento.industria ? `- Indústria: R$ ${dados.faturamento.industria.toFixed(2)}` : ""}
+${dados.faturamento.servicos ? `- Serviços: R$ ${dados.faturamento.servicos.toFixed(2)}` : ""}
+- TOTAL FATURAMENTO: R$ ${total.faturamentoTotal.toFixed(2)}
+
+COMPRAS:
+- Total Compras: R$ ${dados.totalCompras.toFixed(2)}
+
+IMPOSTOS PAGOS:
+${dados.impostos.simples ? `- Simples Nacional: R$ ${dados.impostos.simples.toFixed(2)}` : ""}
+${dados.impostos.icms ? `- ICMS: R$ ${dados.impostos.icms.toFixed(2)}` : ""}
+${dados.impostos.pis ? `- PIS: R$ ${dados.impostos.pis.toFixed(2)}` : ""}
+${dados.impostos.cofins ? `- COFINS: R$ ${dados.impostos.cofins.toFixed(2)}` : ""}
+${dados.impostos.ipi ? `- IPI: R$ ${dados.impostos.ipi.toFixed(2)}` : ""}
+${dados.impostos.iss ? `- ISS: R$ ${dados.impostos.iss.toFixed(2)}` : ""}
+- TOTAL IMPOSTOS: R$ ${total.impostosTotal.toFixed(2)}
 `;
+  })
+  .join("\n")}
 
-      // Chamar a API para teste
+FORMATO DO E-MAIL SOLICITADO:
+
+Prezado(a) Sr(a). ${empresa.responsavel},
+
+Espero que esteja bem.
+
+Finalizado a apuração desse mês, venho por meio deste apresentar a análise financeira e tributária detalhada referente ao período de ${primeiroMes} a ${ultimoMes}.
+
+[INSIRA AQUI A ANÁLISE COMPLETA COM:]
+
+1. SAUDAÇÃO INICIAL FORMAL
+2. ANÁLISE HORIZONTAL (variação entre meses) com percentuais detalhados
+3. ANÁLISE VERTICAL (composição por atividade) com distribuição percentual
+4. ANÁLISE TRIBUTÁRIA DETALHADA com evolução da carga tributária
+5. ANÁLISE DE MARGEM E RENTABILIDADE
+6. PRINCIPAIS INDICADORES E MÉTRICAS
+7. PONTOS DE ATENÇÃO IDENTIFICADOS
+8. CONSIDERAÇÕES FINAIS
+
+[FORMATO ESPECÍFICO:]
+- Use linguagem formal e profissional de e-mail corporativo
+- Não use markdown, tabelas com | ou qualquer formatação técnica
+- Use parágrafos bem estruturados e de fácil leitura
+- Inclua todos os cálculos percentuais no texto de forma natural
+- Seja direto e objetivo, mas completo na análise
+- Use expressões como "Observamos uma variação de", "Verificamos que", "Identificamos"
+- Termine com uma conclusão clara e disponibilidade para esclarecimentos
+
+Atenciosamente,
+
+Claudenir Laurindo Nojosa
+
+
+Gere o e-mail completo em português brasileiro, pronto para ser copiado e enviado diretamente ao cliente.
+    `.trim();
+
+      // Resto do código permanece igual...
+      console.log("Prompt enviado para análise:", prompt);
+
       const response = await fetch("/api/gerar-analise", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({
+          prompt,
+          empresaId: empresaSelecionada,
+          usuarioId: session?.user?.id,
+          mesReferencia: mesReferenciaSelecionado, // Usar o estado correto
+          dadosApuracao: dadosApuracao,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error("Erro na API");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro na API");
       }
 
       const data = await response.json();
-      setAnalise(data.analise || "Análise gerada com sucesso!");
-      toast.success("Teste realizado!");
+      setAnalise(data.analise);
+
+      if (data.salvoNoBanco) {
+        toast.success("Análise gerada e salva com sucesso!");
+      } else {
+        toast.success("Análise gerada com sucesso!");
+      }
+
+      // Atualizar histórico com dados do banco
+      await carregarHistoricoAnalises();
     } catch (error) {
       console.error("Erro:", error);
-      toast.error("Erro no teste da API");
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao gerar análise"
+      );
+      setAnalise(`Prezado(a),...`);
     } finally {
       setCarregandoAnalise(false);
     }
   };
+
+  const carregarHistoricoAnalises = async () => {
+    try {
+      const response = await fetch(
+        `/api/analises?empresaId=${empresaSelecionada}`
+      );
+      if (response.ok) {
+        const analises = await response.json();
+        setHistoricoAnalises(
+          analises.map((a: any) => ({
+            empresa: a.empresa.razaoSocial,
+            data: new Date(a.createdAt).toLocaleDateString("pt-BR"),
+            analise: a.analiseTexto,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Erro ao carregar histórico:", error);
+    }
+  };
+
   const carregarAnaliseDoHistorico = (analiseSalva: string) => {
     setAnalise(analiseSalva);
     setMostrarHistorico(false);
     toast.success("Análise carregada do histórico");
   };
-  // Meses para os inputs
-  const meses = [
-    { value: "agosto", label: "Agosto/2023" },
-    { value: "setembro", label: "Setembro/2023" },
-    { value: "outubro", label: "Outubro/2023" },
-  ];
 
   // Buscar empresas apenas uma vez quando a sessão estiver carregada
   const fetchEmpresas = useCallback(async () => {
@@ -169,7 +369,11 @@ ANÁLISE RÁPIDA: Forneça uma análise tributária resumida em 5 linhas sobre o
     if (status === "authenticated" && !empresasCarregadas) {
       fetchEmpresas();
     }
-  }, [status, empresasCarregadas, fetchEmpresas]);
+
+    if (empresaSelecionada) {
+      carregarHistoricoAnalises();
+    }
+  }, [status, empresasCarregadas, fetchEmpresas, empresaSelecionada]);
 
   const handleAtividadeChange = (atividade: Atividade) => {
     setAtividadesSelecionadas((prev) => {
@@ -191,10 +395,10 @@ ANÁLISE RÁPIDA: Forneça uma análise tributária resumida em 5 linhas sobre o
   ) => {
     const novosDados = [...dadosApuracao];
 
-    // Garantir que temos um objeto para este mês
+    // Garantir que temos um objeto para este mês com o mes correto
     if (!novosDados[mesIndex]) {
       novosDados[mesIndex] = {
-        mes: meses[mesIndex].value,
+        mes: meses[mesIndex].value, // Usar o valor correto do mês
         faturamento: {},
         totalCompras: 0,
         impostos: {},
@@ -220,13 +424,6 @@ ANÁLISE RÁPIDA: Forneça uma análise tributária resumida em 5 linhas sobre o
     }
 
     setDadosApuracao(novosDados);
-  };
-
-  const calcularTotalVendas = (dados: DadosApuracao): number => {
-    return Object.values(dados.faturamento || {}).reduce(
-      (acc, curr) => acc + (curr || 0),
-      0
-    );
   };
 
   const formatarRegimeTributario = (regime: string): string => {
@@ -347,6 +544,7 @@ ANÁLISE RÁPIDA: Forneça uma análise tributária resumida em 5 linhas sobre o
                       setEmpresaSelecionada(value);
                       setAtividadesSelecionadas([]);
                       setDadosApuracao([]);
+                      setMeses([]);
                     }}
                   >
                     <SelectTrigger className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800 focus:ring-emerald-500">
@@ -377,12 +575,10 @@ ANÁLISE RÁPIDA: Forneça uma análise tributária resumida em 5 linhas sobre o
                         {empresa.uf}
                       </Badge>
                     </div>
-
                     <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
                       <User className="h-4 w-4" />
                       Responsável: {empresa.responsavel}
                     </div>
-
                     <div className="space-y-4">
                       <h3 className="font-medium text-emerald-800 dark:text-emerald-200">
                         Tipos de Atividade
@@ -444,8 +640,81 @@ ANÁLISE RÁPIDA: Forneça uma análise tributária resumida em 5 linhas sobre o
                         </div>
                       </div>
                     </div>
+                    {/* Seletor de Mês de Referência */}
+                    <div className="space-y-2"></div>
+                    {/* Adicionar Novo Mês */}
+                    <div className="space-y-2 p-4 border border-emerald-100 dark:border-emerald-800 rounded-lg">
+                      <h4 className="font-medium text-emerald-700 dark:text-emerald-300">
+                        Adicionar Novo Mês
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Select value={novoMes} onValueChange={setNovoMes}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Mês" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="janeiro">Janeiro</SelectItem>
+                            <SelectItem value="fevereiro">Fevereiro</SelectItem>
+                            <SelectItem value="marco">Março</SelectItem>
+                            <SelectItem value="abril">Abril</SelectItem>
+                            <SelectItem value="maio">Maio</SelectItem>
+                            <SelectItem value="junho">Junho</SelectItem>
+                            <SelectItem value="julho">Julho</SelectItem>
+                            <SelectItem value="agosto">Agosto</SelectItem>
+                            <SelectItem value="setembro">Setembro</SelectItem>
+                            <SelectItem value="outubro">Outubro</SelectItem>
+                            <SelectItem value="novembro">Novembro</SelectItem>
+                            <SelectItem value="dezembro">Dezembro</SelectItem>
+                          </SelectContent>
+                        </Select>
 
-                    {atividadesSelecionadas.length > 0 && (
+                        <Select value={novoAno} onValueChange={setNovoAno}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Ano" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="2023">2023</SelectItem>
+                            <SelectItem value="2024">2024</SelectItem>
+                            <SelectItem value="2025">2025</SelectItem>
+                            <SelectItem value="2026">2026</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button onClick={adicionarMes} className="w-full mt-2">
+                        Adicionar Mês
+                      </Button>
+                    </div>
+                 
+                    {meses.length > 0 && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                          Mês de Referência da Análise
+                        </label>
+                        <Select
+                          value={mesSelecionado}
+                          onValueChange={(value) => {
+                            setMesSelecionado(value);
+                            setMesReferenciaSelecionado(value);
+                          }}
+                        >
+                          <SelectTrigger className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800 focus:ring-emerald-500">
+                            <SelectValue placeholder="Selecione o mês de referência" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {meses.map((mes) => (
+                              <SelectItem key={mes.value} value={mes.value}>
+                                {mes.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                          Este será o mês principal da análise
+                        </p>
+                      </div>
+                    )}
+                    {/* Dados por Mês */}
+                    {meses.length > 0 && atividadesSelecionadas.length > 0 && (
                       <div className="space-y-4">
                         <h3 className="font-medium text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
@@ -655,6 +924,9 @@ ANÁLISE RÁPIDA: Forneça uma análise tributária resumida em 5 linhas sobre o
               disabled={
                 !empresaSelecionada ||
                 atividadesSelecionadas.length === 0 ||
+                meses.length === 0 ||
+                dadosApuracao.length === 0 ||
+                !mesReferenciaSelecionado || // Validar se o mês de referência foi selecionado
                 carregandoAnalise
               }
               className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-md"
@@ -682,9 +954,9 @@ ANÁLISE RÁPIDA: Forneça uma análise tributária resumida em 5 linhas sobre o
               Análise Inteligente
               <Badge
                 variant="outline"
-                className="ml-2 bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                className="ml-2 bg-blue-50 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
               >
-                ChatGPT
+                Claude
               </Badge>
             </CardTitle>
             <CardDescription className="text-emerald-600 dark:text-emerald-300">

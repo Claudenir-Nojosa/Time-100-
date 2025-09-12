@@ -30,6 +30,8 @@ model Usuario {
 
   Diagnostico       Diagnostico[]
   BaseLegalFavorito BaseLegalFavorito[]
+
+  AnaliseTributaria AnaliseTributaria[]
 }
 
 model Account {
@@ -71,6 +73,8 @@ model Empresa {
   status               StatusEmpresa?
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  AnaliseTributaria AnaliseTributaria[]
 }
 
 model StatusEmpresa {
@@ -274,4 +278,21 @@ model Diagnostico {
   formData    Json
   usuario     Usuario  @relation(fields: [usuarioId], references: [id])
   usuarioId   String
+}
+
+model AnaliseTributaria {
+  id               String   @id @default(cuid())
+  empresaId        String
+  usuarioId        String
+  mesReferencia    String   
+  dadosApuracao    Json     
+  analiseTexto     String   @db.Text 
+  indicadores      Json     
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@unique([empresaId, mesReferencia])
 }
