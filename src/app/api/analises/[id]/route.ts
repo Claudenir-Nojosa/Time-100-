@@ -2,14 +2,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 
-// Interface para os parâmetros
-interface Props {
-  params: { id: string };
-}
-
-export async function GET(request: NextRequest, { params }: Props) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const analise = await db.analiseTributaria.findUnique({
       where: { id },
@@ -39,9 +37,12 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: Props) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Verificar se a análise existe
     const analise = await db.analiseTributaria.findUnique({
