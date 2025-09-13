@@ -252,8 +252,8 @@ function analisarTendencias(dadosApuracao: any[]) {
 }
 
 function extrairInsightsDaAnalise(analise: string) {
-  // Extrair insights chave da análise textual usando regex simples
-  const insights = {
+  // Usar um tipo simples que seja compatível com JSON
+  const insights: Record<string, string[]> = {
     pontosAtencao: [],
     oportunidades: [],
     recomendacoes: [],

@@ -12,7 +12,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Download, Copy } from "lucide-react";
+import { ArrowLeft, FileText, Download, Copy, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 
 interface AnaliseDetalhes {
@@ -79,6 +79,51 @@ export default function AnaliseDetalhesPage() {
     }
   };
 
+  const acessarDashboard = () => {
+    if (analise?.id) {
+      router.push(`/dashboard/analises/${analise.id}/dashboard`);
+    }
+  };
+
+  const gerarPDFProfissional = async () => {
+    // Verificar se analise não é null
+    if (!analise) {
+      toast.error("Nenhuma análise disponível para gerar PDF");
+      return;
+    }
+
+    try {
+      toast.loading("Gerando PDF profissional...");
+
+      const response = await fetch("/api/gerar-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ analiseId: analise.id }), // Agora analise não é null
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao gerar PDF");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relatorio-profissional-${analise.empresa.razaoSocial}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("PDF profissional gerado com sucesso!");
+    } catch (error) {
+      console.error("Erro:", error);
+      toast.error("Erro ao gerar PDF");
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-8">
@@ -129,6 +174,18 @@ export default function AnaliseDetalhesPage() {
           <Button variant="outline" onClick={exportarComoTxt}>
             <Download className="mr-2 h-4 w-4" />
             Exportar
+          </Button>
+          <Button onClick={acessarDashboard}>
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Acessar Dashboard
+          </Button>
+          <Button
+            variant="outline"
+            onClick={gerarPDFProfissional}
+            disabled={!analise} // Desabilita o botão se analise for null
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Relatório Profissional
           </Button>
         </div>
       </div>

@@ -5,11 +5,37 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Plus, ArrowRight, Building, Calendar } from "lucide-react";
+import {
+  FileText,
+  Plus,
+  ArrowRight,
+  Building,
+  Calendar,
+  Trash2,
+  Eye,
+  BarChart3,
+} from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Analise {
   id: string;
@@ -29,6 +55,7 @@ export default function AnalisesPage() {
   const router = useRouter();
   const [analises, setAnalises] = useState<Analise[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -40,11 +67,11 @@ export default function AnalisesPage() {
     try {
       setLoading(true);
       const response = await fetch("/api/analises");
-      
+
       if (!response.ok) {
         throw new Error("Erro ao carregar análises");
       }
-      
+
       const data = await response.json();
       setAnalises(data);
     } catch (error) {
@@ -55,15 +82,37 @@ export default function AnalisesPage() {
     }
   };
 
+  const deletarAnalise = async (id: string) => {
+    try {
+      setDeletingId(id);
+      const response = await fetch(`/api/analises/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao deletar análise");
+      }
+
+      // Remover a análise da lista local
+      setAnalises(analises.filter((analise) => analise.id !== id));
+      toast.success("Análise deletada com sucesso");
+    } catch (error) {
+      console.error("Erro:", error);
+      toast.error("Erro ao deletar análise");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const formatarData = (dataString: string) => {
-    return new Date(dataString).toLocaleDateString('pt-BR');
+    return new Date(dataString).toLocaleDateString("pt-BR");
   };
 
   const formatarValor = (valor?: number) => {
     if (!valor) return "N/A";
-    return valor.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
+    return valor.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     });
   };
 
@@ -102,7 +151,9 @@ export default function AnalisesPage() {
         <Card>
           <CardContent className="py-16 text-center">
             <FileText className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium mb-2">Nenhuma análise encontrada</h3>
+            <h3 className="text-lg font-medium mb-2">
+              Nenhuma análise encontrada
+            </h3>
             <p className="text-gray-500 mb-6">
               Comece criando sua primeira análise tributária
             </p>
@@ -114,10 +165,15 @@ export default function AnalisesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {analises.map((analise) => (
-            <Card key={analise.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
+            <Card
+              key={analise.id}
+              className="hover:shadow-lg transition-shadow group"
+            >
+              <CardHeader className="pb-3">
                 <div className="flex justify-between items-start mb-2">
-                  <CardTitle className="text-lg">{analise.empresa.razaoSocial}</CardTitle>
+                  <CardTitle className="text-lg">
+                    {analise.empresa.razaoSocial}
+                  </CardTitle>
                   <Badge variant="outline" className="ml-2">
                     {analise.mesReferencia}
                   </Badge>
@@ -126,7 +182,7 @@ export default function AnalisesPage() {
                   Criada em {formatarData(analise.createdAt)}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-3">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="flex items-center">
@@ -143,22 +199,68 @@ export default function AnalisesPage() {
                       Carga Tributária
                     </span>
                     <span className="font-medium">
-                      {analise.indicadores?.cargaTributariaMedia 
+                      {analise.indicadores?.cargaTributariaMedia
                         ? `${analise.indicadores.cargaTributariaMedia.toFixed(2)}%`
-                        : "N/A"
-                      }
+                        : "N/A"}
                     </span>
                   </div>
                 </div>
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full mt-4"
-                  onClick={() => router.push(`/dashboard/analises/${analise.id}`)}
-                >
-                  Ver Detalhes
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() =>
+                      router.push(`/dashboard/analises/${analise.id}`)
+                    }
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Detalhes
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() =>
+                      router.push(`/dashboard/analises/${analise.id}/dashboard`)
+                    }
+                  >
+                    <BarChart3 className="h-4 w-4 mr-1" />
+                    Dashboard
+                  </Button>
+
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        disabled={deletingId === analise.id}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja deletar esta análise? Esta ação
+                          não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deletarAnalise(analise.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {deletingId === analise.id
+                            ? "Deletando..."
+                            : "Deletar"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </CardContent>
             </Card>
           ))}
