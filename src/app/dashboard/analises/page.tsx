@@ -45,6 +45,15 @@ interface Analise {
     razaoSocial: string;
   };
   indicadores: {
+    consolidado?: {
+      financeiros?: {
+        faturamentoTotal?: number;
+      };
+      tributarios?: {
+        cargaTributaria?: number;
+      };
+    };
+    // Para compatibilidade com versões antigas
     faturamentoTotal?: number;
     cargaTributariaMedia?: number;
   };
@@ -73,6 +82,7 @@ export default function AnalisesPage() {
       }
 
       const data = await response.json();
+      console.log("Dados recebidos da API:", data); // Para debug
       setAnalises(data);
     } catch (error) {
       console.error("Erro:", error);
@@ -109,11 +119,31 @@ export default function AnalisesPage() {
   };
 
   const formatarValor = (valor?: number) => {
-    if (!valor) return "N/A";
+    if (valor === undefined || valor === null) return "N/A";
     return valor.toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",
     });
+  };
+
+  // Função para obter o faturamento da nova estrutura
+  const obterFaturamento = (indicadores: any) => {
+    // Primeiro tenta a nova estrutura
+    if (indicadores?.consolidado?.financeiros?.faturamentoTotal !== undefined) {
+      return indicadores.consolidado.financeiros.faturamentoTotal;
+    }
+    // Depois tenta a estrutura antiga
+    return indicadores?.faturamentoTotal || undefined;
+  };
+
+  // Função para obter a carga tributária da nova estrutura
+  const obterCargaTributaria = (indicadores: any) => {
+    // Primeiro tenta a nova estrutura
+    if (indicadores?.consolidado?.tributarios?.cargaTributaria !== undefined) {
+      return indicadores.consolidado.tributarios.cargaTributaria;
+    }
+    // Depois tenta a estrutura antiga
+    return indicadores?.cargaTributariaMedia || undefined;
   };
 
   if (status === "loading" || loading) {
@@ -190,7 +220,7 @@ export default function AnalisesPage() {
                       Faturamento
                     </span>
                     <span className="font-medium">
-                      {formatarValor(analise.indicadores?.faturamentoTotal)}
+                      {formatarValor(obterFaturamento(analise.indicadores))}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
@@ -199,44 +229,58 @@ export default function AnalisesPage() {
                       Carga Tributária
                     </span>
                     <span className="font-medium">
-                      {analise.indicadores?.cargaTributariaMedia
-                        ? `${analise.indicadores.cargaTributariaMedia.toFixed(2)}%`
+                      {obterCargaTributaria(analise.indicadores)
+                        ? `${obterCargaTributaria(analise.indicadores)?.toFixed(2)}%`
                         : "N/A"}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() =>
-                      router.push(`/dashboard/analises/${analise.id}`)
-                    }
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    Detalhes
-                  </Button>
+                <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        router.push(`/dashboard/analises/${analise.id}`)
+                      }
+                      className="flex items-center"
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Detalhes
+                    </Button>
 
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() =>
-                      router.push(`/dashboard/analises/${analise.id}/dashboard`)
-                    }
-                  >
-                    <BarChart3 className="h-4 w-4 mr-1" />
-                    Dashboard
-                  </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        router.push(
+                          `/dashboard/analises/${analise.id}/dashboard`
+                        )
+                      }
+                      className="flex items-center"
+                    >
+                      <BarChart3 className="h-4 w-4 mr-1" />
+                      Dashboard
+                    </Button>
+                  </div>
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
-                        variant="destructive"
-                        size="icon"
+                        variant="outline"
+                        size="sm"
                         disabled={deletingId === analise.id}
+                        className="flex items-center"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {deletingId === analise.id ? (
+                          "Deletando..."
+                        ) : (
+                          <>
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Deletar
+                          </>
+                        )}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -251,11 +295,8 @@ export default function AnalisesPage() {
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => deletarAnalise(analise.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                          {deletingId === analise.id
-                            ? "Deletando..."
-                            : "Deletar"}
+                          Confirmar
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
