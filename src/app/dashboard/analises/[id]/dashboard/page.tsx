@@ -77,89 +77,6 @@ export default function AnaliseDashboard() {
     }
   };
 
-  const downloadChartAsImage = async (
-    chartRef: React.RefObject<HTMLDivElement>,
-    chartName: string
-  ) => {
-    const chartElement = getChartElement(chartRef);
-    if (!chartElement) {
-      toast.error("Elemento do gráfico não encontrado");
-      return;
-    }
-
-    try {
-      setDownloading(chartName);
-
-      const dataUrl = await htmlToImage.toPng(chartElement, {
-        backgroundColor: "#ffffff",
-        quality: 1.0,
-        pixelRatio: 2,
-      });
-
-      const link = document.createElement("a");
-      link.download = `grafico-${chartName.toLowerCase().replace(/\s+/g, "-")}-${analise?.empresa.razaoSocial}.png`;
-      link.href = dataUrl;
-      link.click();
-
-      toast.success(`Gráfico ${chartName} baixado com sucesso!`);
-    } catch (error) {
-      console.error("Erro ao baixar gráfico:", error);
-      toast.error("Erro ao baixar gráfico");
-    } finally {
-      setDownloading(null);
-    }
-  };
-
-  const copyChartAsImage = async (
-    chartRef: React.RefObject<HTMLDivElement>,
-    chartName: string
-  ) => {
-    if (!chartRef.current) {
-      toast.error("Elemento do gráfico não encontrado");
-      return;
-    }
-
-    try {
-      setDownloading(`copy-${chartName}`);
-
-      const dataUrl = await htmlToImage.toPng(chartRef.current, {
-        backgroundColor: "#ffffff",
-        quality: 1.0,
-        pixelRatio: 2,
-      });
-
-      // Copiar para área de transferência
-      const blob = await fetch(dataUrl).then((r) => r.blob());
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          [blob.type]: blob,
-        }),
-      ]);
-
-      toast.success(
-        `Gráfico ${chartName} copiado para a área de transferência!`
-      );
-    } catch (error) {
-      console.error("Erro ao copiar gráfico:", error);
-
-      // Fallback para navegadores que não suportam Clipboard API
-      if (error instanceof Error && error.name === "DataError") {
-        toast.error(
-          "Seu navegador não suporta copiar imagens. Use o download."
-        );
-      } else {
-        toast.error("Erro ao copiar gráfico");
-      }
-    } finally {
-      setDownloading(null);
-    }
-  };
-
-  const getChartElement = (
-    chartRef: React.RefObject<HTMLDivElement>
-  ): HTMLDivElement | null => {
-    return chartRef.current;
-  };
   // Cores para os gráficos
   const CORES_IMPOSTOS = [
     "#FF6B6B",
@@ -172,14 +89,14 @@ export default function AnaliseDashboard() {
     "#5B6DBD",
   ];
 
-  const CORES_COMPARATIVO = ["#10b981", "#ef4444", "#3b82f6"];
+  const CORES_COMPARATIVO = ["#10b981", "#ef4444", "#3b82f6", "#f59e0b"];
 
   if (loading) {
     return (
       <div className="container mx-auto py-8">
         <Skeleton className="h-10 w-32 mb-6" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          {[...Array(5)].map((_, i) => (
             <Skeleton key={i} className="h-32" />
           ))}
         </div>
@@ -219,14 +136,15 @@ export default function AnaliseDashboard() {
           color: CORES_IMPOSTOS[index % CORES_IMPOSTOS.length],
         }))
     : [];
-
   const dadosEvolucaoFaturamento =
     indicadores.mensal?.map((item: any) => ({
       mes: item.mes,
       faturamento: item.financeiro?.faturamento || 0,
       impostos: item.tributario?.impostos || 0,
+      compras: item.financeiro?.compras || 0,
       margem: item.financeiro?.margemBruta || 0,
     })) || [];
+
 
   const dadosComparativo = [
     {
@@ -235,13 +153,21 @@ export default function AnaliseDashboard() {
       cor: CORES_COMPARATIVO[0],
     },
     {
+      name: "Compras",
+      valor: indicadores.consolidado?.financeiros?.comprasTotais || 0,
+      cor: CORES_COMPARATIVO[3],
+    },
+    {
       name: "Impostos",
       valor: indicadores.consolidado?.tributarios?.impostosTotais || 0,
       cor: CORES_COMPARATIVO[1],
     },
     {
       name: "Lucro",
-      valor: indicadores.consolidado?.financeiros?.lucroBruto || 0,
+      valor:
+        (indicadores.consolidado?.financeiros?.faturamentoTotal || 0) -
+        (indicadores.consolidado?.tributarios?.impostosTotais || 0) -
+        (indicadores.consolidado?.financeiros?.comprasTotais || 0),
       cor: CORES_COMPARATIVO[2],
     },
   ];
@@ -402,7 +328,7 @@ export default function AnaliseDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">
@@ -417,7 +343,20 @@ export default function AnaliseDashboard() {
             </p>
           </CardContent>
         </Card>
-
+           <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total de Compras
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-amber-600">
+              {formatarValor(
+                indicadores.consolidado?.financeiros?.comprasTotais || 0
+              )}
+            </p>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">
@@ -574,6 +513,7 @@ export default function AnaliseDashboard() {
       </div>
 
       {/* Comparativo Faturamento x Impostos x Lucro */}
+      {/* Comparativo Faturamento x Impostos x Compras x Lucro */}
       <Card className="mb-8">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-lg">Comparativo Financeiro</CardTitle>
