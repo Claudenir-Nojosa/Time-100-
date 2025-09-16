@@ -27,6 +27,7 @@ import {
   ScanEye,
   Route,
   Server,
+  EqualApproximately,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession, signOut } from "next-auth/react";
@@ -196,7 +197,7 @@ export default function Sidebar() {
               {!isCollapsed && <span className="ml-2">Calendário</span>}
             </Link>
           </li>
-              <li>
+          <li>
             <Link
               href="/dashboard/biblioteca"
               className={`flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 ${
@@ -238,6 +239,17 @@ export default function Sidebar() {
             >
               <Mails className="h-5 w-5" />
               {!isCollapsed && <span className="ml-2">Análises</span>}
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/dashboard/analise-ncm"
+              className={`flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 ${
+                isCollapsed ? "justify-center" : ""
+              }`}
+            >
+              <EqualApproximately className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-2">Verificador de NCM</span>}
             </Link>
           </li>
           <li>

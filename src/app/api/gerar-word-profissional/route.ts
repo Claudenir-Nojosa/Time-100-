@@ -44,23 +44,16 @@ export async function POST(request: NextRequest) {
     const doc = createWordDocument(analise, analise.analiseTexto);
 
     // Gerar buffer do documento
-    // Gerar buffer do documento
     const buffer = await Packer.toBuffer(doc);
+    const uint8Array = new Uint8Array(buffer); // ✅ conversão segura
 
-    // Converter para ArrayBuffer de forma segura
-    const arrayBuffer = buffer.buffer.slice(
-      buffer.byteOffset,
-      buffer.byteOffset + buffer.byteLength
-    );
-
-    // Usar Response diretamente com ArrayBuffer
-    return new Response(arrayBuffer, {
+    return new NextResponse(uint8Array, {
       status: 200,
-      headers: new Headers({
+      headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "Content-Disposition": `attachment; filename="relatorio-${analise.empresa.razaoSocial}-${analise.mesReferencia}.docx"`,
-      }),
+      },
     });
   } catch (error) {
     console.error("Erro ao gerar Word:", error);

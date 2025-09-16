@@ -31,7 +31,7 @@ import {
   Calculator,
   Copy,
   Sparkles,
-  ArrowLeftRight,
+  ArrowLeft,
   DollarSign,
   Calendar,
   User,
@@ -42,6 +42,11 @@ import {
   FileText,
   TrendingUp,
   Lightbulb,
+  ChevronDown,
+  Plus,
+  X,
+  Download,
+  History,
 } from "lucide-react";
 
 type Empresa = {
@@ -96,6 +101,9 @@ export default function EmailsPage() {
     { empresa: string; data: string; analise: string }[]
   >([]);
   const [mostrarHistorico, setMostrarHistorico] = useState(false);
+  const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>(
+    {}
+  );
 
   // Gerar lista de meses disponíveis
   const mesesDoAno = [
@@ -147,6 +155,13 @@ export default function EmailsPage() {
     // Remover também os dados de apuração desse mês
     setDadosApuracao((prev) => prev.filter((d) => d.mes !== mesValue));
     toast.success("Mês removido com sucesso!");
+  };
+
+  const toggleExpandMonth = (mesValue: string) => {
+    setExpandedMonths((prev) => ({
+      ...prev,
+      [mesValue]: !prev[mesValue],
+    }));
   };
 
   const gerarAnaliseTributaria = async () => {
@@ -276,7 +291,6 @@ Claudenir Laurindo Nojosa
 Gere o e-mail completo em português brasileiro, pronto para ser copiado e enviado diretamente ao cliente.
     `.trim();
 
-      // Resto do código permanece igual...
       console.log("Prompt enviado para análise:", prompt);
 
       const response = await fetch("/api/gerar-analise", {
@@ -286,7 +300,7 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
           prompt,
           empresaId: empresaSelecionada,
           usuarioId: session?.user?.id,
-          mesReferencia: mesReferenciaSelecionado, // Usar o estado correto
+          mesReferencia: mesReferenciaSelecionado,
           dadosApuracao: dadosApuracao,
         }),
       });
@@ -398,7 +412,7 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
     // Garantir que temos um objeto para este mês com o mes correto
     if (!novosDados[mesIndex]) {
       novosDados[mesIndex] = {
-        mes: meses[mesIndex].value, // Usar o valor correto do mês
+        mes: meses[mesIndex].value,
         faturamento: {},
         totalCompras: 0,
         impostos: {},
@@ -451,19 +465,25 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
   const empresa = empresas.find((e) => e.id === empresaSelecionada);
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
+    <div className="container mx-auto py-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => window.history.back()}
+            className="rounded-full h-9 w-9"
           >
-            <ArrowLeftRight className="h-5 w-5 rotate-90" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-3xl font-bold dark:text-emerald-100">
-            Análise Tributária Inteligente
-          </h1>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+              Análise Tributária
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Gere análises completas para seus clientes
+            </p>
+          </div>
         </div>
 
         {historicoAnalises.length > 0 && (
@@ -472,37 +492,39 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
             onClick={() => setMostrarHistorico(!mostrarHistorico)}
             className="flex items-center gap-2"
           >
-            <FileText className="h-4 w-4" />
-            {mostrarHistorico ? "Ocultar Histórico" : "Ver Histórico"}
+            <History className="h-4 w-4" />
+            {mostrarHistorico ? "Ocultar" : "Histórico"}
           </Button>
         )}
       </div>
 
       {mostrarHistorico && (
-        <Card className="mb-6 border-emerald-200 dark:border-emerald-800">
-          <CardHeader>
-            <CardTitle className="text-emerald-800 dark:text-emerald-100">
-              <FileText className="h-5 w-5 inline mr-2" />
+        <Card className="mb-6 border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <History className="h-4 w-4" />
               Análises Anteriores
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="pt-0">
+            <div className="space-y-2">
               {historicoAnalises.map((item, index) => (
                 <div
                   key={index}
-                  className="p-3 border rounded-lg border-emerald-100 dark:border-emerald-800"
+                  className="p-3 border rounded-lg border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                 >
                   <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-medium">{item.empresa}</h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="space-y-1">
+                      <h4 className="font-medium text-sm">{item.empresa}</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {item.data}
                       </p>
                     </div>
                     <Button
                       size="sm"
+                      variant="ghost"
                       onClick={() => carregarAnaliseDoHistorico(item.analise)}
+                      className="h-8 px-2"
                     >
                       Carregar
                     </Button>
@@ -514,19 +536,19 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
         </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Painel de entrada de dados */}
-        <Card className="border-emerald-200 dark:border-emerald-900/30 bg-white dark:bg-gray-900 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-emerald-800 dark:text-emerald-100">
-              <Building className="h-5 w-5 text-emerald-500" />
+        <Card className="border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Building className="h-4 w-4" />
               Dados para Análise
             </CardTitle>
-            <CardDescription className="text-emerald-600 dark:text-emerald-300">
+            <CardDescription className="text-sm">
               Selecione a empresa e informe os dados dos últimos meses
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-5">
             {loading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-full bg-gray-200 dark:bg-gray-800" />
@@ -535,9 +557,7 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
             ) : (
               <>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                    Selecione a Empresa
-                  </label>
+                  <Label className="text-sm">Selecione a Empresa</Label>
                   <Select
                     value={empresaSelecionada}
                     onValueChange={(value) => {
@@ -547,7 +567,7 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
                       setMeses([]);
                     }}
                   >
-                    <SelectTrigger className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800 focus:ring-emerald-500">
+                    <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:ring-gray-500">
                       <SelectValue placeholder="Selecione uma empresa" />
                     </SelectTrigger>
                     <SelectContent>
@@ -563,27 +583,28 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
 
                 {empresaSelecionada && empresa && (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Badge variant="secondary" className="text-xs">
                         {formatarRegimeTributario(empresa.regimeTributacao)}
                       </Badge>
                       <Badge
                         variant="outline"
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-1 text-xs"
                       >
                         <MapPin className="h-3 w-3" />
                         {empresa.uf}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
-                      <User className="h-4 w-4" />
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <User className="h-3 w-3" />
                       Responsável: {empresa.responsavel}
                     </div>
-                    <div className="space-y-4">
-                      <h3 className="font-medium text-emerald-800 dark:text-emerald-200">
+
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">
                         Tipos de Atividade
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="comercio"
@@ -593,12 +614,13 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
                             onCheckedChange={() =>
                               handleAtividadeChange("comercio")
                             }
+                            className="h-4 w-4"
                           />
                           <Label
                             htmlFor="comercio"
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 text-sm"
                           >
-                            <Store className="h-4 w-4" />
+                            <Store className="h-3 w-3" />
                             Comércio
                           </Label>
                         </div>
@@ -611,12 +633,13 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
                             onCheckedChange={() =>
                               handleAtividadeChange("industria")
                             }
+                            className="h-4 w-4"
                           />
                           <Label
                             htmlFor="industria"
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 text-sm"
                           >
-                            <Factory className="h-4 w-4" />
+                            <Factory className="h-3 w-3" />
                             Indústria
                           </Label>
                         </div>
@@ -629,67 +652,65 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
                             onCheckedChange={() =>
                               handleAtividadeChange("servicos")
                             }
+                            className="h-4 w-4"
                           />
                           <Label
                             htmlFor="servicos"
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 text-sm"
                           >
-                            <Wrench className="h-4 w-4" />
+                            <Wrench className="h-3 w-3" />
                             Serviços
                           </Label>
                         </div>
                       </div>
                     </div>
-                    {/* Seletor de Mês de Referência */}
-                    <div className="space-y-2"></div>
+
                     {/* Adicionar Novo Mês */}
-                    <div className="space-y-2 p-4 border border-emerald-100 dark:border-emerald-800 rounded-lg">
-                      <h4 className="font-medium text-emerald-700 dark:text-emerald-300">
+                    <div className="space-y-3 p-3 border border-gray-200 dark:border-gray-700 rounded-md">
+                      <h4 className="text-sm font-medium">
                         Adicionar Novo Mês
                       </h4>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-2">
                         <Select value={novoMes} onValueChange={setNovoMes}>
-                          <SelectTrigger>
+                          <SelectTrigger className="text-sm">
                             <SelectValue placeholder="Mês" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="janeiro">Janeiro</SelectItem>
-                            <SelectItem value="fevereiro">Fevereiro</SelectItem>
-                            <SelectItem value="marco">Março</SelectItem>
-                            <SelectItem value="abril">Abril</SelectItem>
-                            <SelectItem value="maio">Maio</SelectItem>
-                            <SelectItem value="junho">Junho</SelectItem>
-                            <SelectItem value="julho">Julho</SelectItem>
-                            <SelectItem value="agosto">Agosto</SelectItem>
-                            <SelectItem value="setembro">Setembro</SelectItem>
-                            <SelectItem value="outubro">Outubro</SelectItem>
-                            <SelectItem value="novembro">Novembro</SelectItem>
-                            <SelectItem value="dezembro">Dezembro</SelectItem>
+                            {mesesDoAno.map((mes) => (
+                              <SelectItem key={mes} value={mes.toLowerCase()}>
+                                {mes}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
 
                         <Select value={novoAno} onValueChange={setNovoAno}>
-                          <SelectTrigger>
+                          <SelectTrigger className="text-sm">
                             <SelectValue placeholder="Ano" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="2023">2023</SelectItem>
-                            <SelectItem value="2024">2024</SelectItem>
-                            <SelectItem value="2025">2025</SelectItem>
-                            <SelectItem value="2026">2026</SelectItem>
+                            {anosDisponiveis.map((ano) => (
+                              <SelectItem key={ano} value={ano}>
+                                {ano}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
-                      <Button onClick={adicionarMes} className="w-full mt-2">
+                      <Button
+                        onClick={adicionarMes}
+                        className="w-full mt-1 h-8 text-sm"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
                         Adicionar Mês
                       </Button>
                     </div>
-                 
+
                     {meses.length > 0 && (
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                        <Label className="text-sm">
                           Mês de Referência da Análise
-                        </label>
+                        </Label>
                         <Select
                           value={mesSelecionado}
                           onValueChange={(value) => {
@@ -697,7 +718,7 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
                             setMesReferenciaSelecionado(value);
                           }}
                         >
-                          <SelectTrigger className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800 focus:ring-emerald-500">
+                          <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:ring-gray-500 text-sm">
                             <SelectValue placeholder="Selecione o mês de referência" />
                           </SelectTrigger>
                           <SelectContent>
@@ -708,207 +729,230 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
                             ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           Este será o mês principal da análise
                         </p>
                       </div>
                     )}
+
                     {/* Dados por Mês */}
                     {meses.length > 0 && atividadesSelecionadas.length > 0 && (
-                      <div className="space-y-4">
-                        <h3 className="font-medium text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-medium flex items-center gap-2">
+                          <Calendar className="h-3 w-3" />
                           Dados por Mês
                         </h3>
 
                         {meses.map((mes, index) => (
                           <div
                             key={mes.value}
-                            className="p-4 border border-emerald-100 dark:border-emerald-800 rounded-lg space-y-3"
+                            className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden"
                           >
-                            <h4 className="font-medium text-emerald-700 dark:text-emerald-300">
-                              {mes.label}
-                            </h4>
-
-                            <div className="space-y-3">
-                              <h5 className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                                Faturamento por Atividade
-                              </h5>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {atividadesSelecionadas.includes(
-                                  "comercio"
-                                ) && (
-                                  <div className="space-y-2">
-                                    <label className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                      <Store className="h-3 w-3" />
-                                      Comércio
-                                    </label>
-                                    <Input
-                                      type="number"
-                                      placeholder="0,00"
-                                      className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800"
-                                      onChange={(e) =>
-                                        handleInputChange(
-                                          index,
-                                          "faturamento.comercio",
-                                          e.target.value
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                )}
-                                {atividadesSelecionadas.includes(
-                                  "industria"
-                                ) && (
-                                  <div className="space-y-2">
-                                    <label className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                      <Factory className="h-3 w-3" />
-                                      Indústria
-                                    </label>
-                                    <Input
-                                      type="number"
-                                      placeholder="0,00"
-                                      className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800"
-                                      onChange={(e) =>
-                                        handleInputChange(
-                                          index,
-                                          "faturamento.industria",
-                                          e.target.value
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                )}
-                                {atividadesSelecionadas.includes(
-                                  "servicos"
-                                ) && (
-                                  <div className="space-y-2">
-                                    <label className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                      <Wrench className="h-3 w-3" />
-                                      Serviços
-                                    </label>
-                                    <Input
-                                      type="number"
-                                      placeholder="0,00"
-                                      className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800"
-                                      onChange={(e) =>
-                                        handleInputChange(
-                                          index,
-                                          "faturamento.servicos",
-                                          e.target.value
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <label className="text-sm text-emerald-600 dark:text-emerald-400">
-                                Total de Compras
-                              </label>
-                              <Input
-                                type="number"
-                                placeholder="0,00"
-                                className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800"
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    index,
-                                    "totalCompras",
-                                    e.target.value
-                                  )
-                                }
+                            <button
+                              onClick={() => toggleExpandMonth(mes.value)}
+                              className="w-full p-3 flex items-center justify-between bg-gray-50 dark:bg-green-950/25 hover:bg-gray-100 dark:hover:bg-green-950/70 transition-colors"
+                            >
+                              <span className="text-sm font-medium">
+                                {mes.label}
+                              </span>
+                              <ChevronDown
+                                className={`h-4 w-4 transition-transform ${expandedMonths[mes.value] ? "rotate-180" : ""}`}
                               />
-                            </div>
+                            </button>
 
-                            <div className="space-y-2">
-                              <label className="text-sm text-emerald-600 dark:text-emerald-400">
-                                {getTipoRegime(empresa.regimeTributacao) ===
-                                "simples"
-                                  ? "Valor do Simples Nacional"
-                                  : "Impostos (opcional)"}
-                              </label>
+                            {expandedMonths[mes.value] && (
+                              <div className="p-3 space-y-3">
+                                <div className="space-y-2">
+                                  <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    Faturamento por Atividade
+                                  </h5>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    {atividadesSelecionadas.includes(
+                                      "comercio"
+                                    ) && (
+                                      <div className="space-y-1">
+                                        <Label className="text-xs flex items-center gap-1">
+                                          <Store className="h-3 w-3" />
+                                          Comércio
+                                        </Label>
+                                        <Input
+                                          type="number"
+                                          placeholder="0,00"
+                                          className="border-gray-300 dark:border-gray-600 text-sm h-8"
+                                          onChange={(e) =>
+                                            handleInputChange(
+                                              index,
+                                              "faturamento.comercio",
+                                              e.target.value
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                    )}
+                                    {atividadesSelecionadas.includes(
+                                      "industria"
+                                    ) && (
+                                      <div className="space-y-1">
+                                        <Label className="text-xs flex items-center gap-1">
+                                          <Factory className="h-3 w-3" />
+                                          Indústria
+                                        </Label>
+                                        <Input
+                                          type="number"
+                                          placeholder="0,00"
+                                          className="border-gray-300 dark:border-gray-600 text-sm h-8"
+                                          onChange={(e) =>
+                                            handleInputChange(
+                                              index,
+                                              "faturamento.industria",
+                                              e.target.value
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                    )}
+                                    {atividadesSelecionadas.includes(
+                                      "servicos"
+                                    ) && (
+                                      <div className="space-y-1">
+                                        <Label className="text-xs flex items-center gap-1">
+                                          <Wrench className="h-3 w-3" />
+                                          Serviços
+                                        </Label>
+                                        <Input
+                                          type="number"
+                                          placeholder="0,00"
+                                          className="border-gray-300 dark:border-gray-600 text-sm h-8"
+                                          onChange={(e) =>
+                                            handleInputChange(
+                                              index,
+                                              "faturamento.servicos",
+                                              e.target.value
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
 
-                              {getTipoRegime(empresa.regimeTributacao) ===
-                              "simples" ? (
-                                <Input
-                                  type="number"
-                                  placeholder="0,00"
-                                  className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800"
-                                  onChange={(e) =>
-                                    handleInputChange(
-                                      index,
-                                      "simples",
-                                      e.target.value
-                                    )
-                                  }
-                                />
-                              ) : (
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">
+                                    Total de Compras
+                                  </Label>
                                   <Input
                                     type="number"
-                                    placeholder="ICMS"
-                                    className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800"
+                                    placeholder="0,00"
+                                    className="border-gray-300 dark:border-gray-600 text-sm h-8"
                                     onChange={(e) =>
                                       handleInputChange(
                                         index,
-                                        "icms",
-                                        e.target.value
-                                      )
-                                    }
-                                  />
-                                  <Input
-                                    type="number"
-                                    placeholder="PIS"
-                                    className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800"
-                                    onChange={(e) =>
-                                      handleInputChange(
-                                        index,
-                                        "pis",
-                                        e.target.value
-                                      )
-                                    }
-                                  />
-                                  <Input
-                                    type="number"
-                                    placeholder="COFINS"
-                                    className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800"
-                                    onChange={(e) =>
-                                      handleInputChange(
-                                        index,
-                                        "cofins",
-                                        e.target.value
-                                      )
-                                    }
-                                  />
-                                  <Input
-                                    type="number"
-                                    placeholder="IPI"
-                                    className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800"
-                                    onChange={(e) =>
-                                      handleInputChange(
-                                        index,
-                                        "ipi",
-                                        e.target.value
-                                      )
-                                    }
-                                  />
-                                  <Input
-                                    type="number"
-                                    placeholder="ISS"
-                                    className="border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-800 col-span-2"
-                                    onChange={(e) =>
-                                      handleInputChange(
-                                        index,
-                                        "iss",
+                                        "totalCompras",
                                         e.target.value
                                       )
                                     }
                                   />
                                 </div>
-                              )}
-                            </div>
+
+                                <div className="space-y-1">
+                                  <Label className="text-xs">
+                                    {getTipoRegime(empresa.regimeTributacao) ===
+                                    "simples"
+                                      ? "Valor do Simples Nacional"
+                                      : "Impostos (opcional)"}
+                                  </Label>
+
+                                  {getTipoRegime(empresa.regimeTributacao) ===
+                                  "simples" ? (
+                                    <Input
+                                      type="number"
+                                      placeholder="0,00"
+                                      className="border-gray-300 dark:border-gray-600 text-sm h-8"
+                                      onChange={(e) =>
+                                        handleInputChange(
+                                          index,
+                                          "simples",
+                                          e.target.value
+                                        )
+                                      }
+                                    />
+                                  ) : (
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <Input
+                                        type="number"
+                                        placeholder="ICMS"
+                                        className="border-gray-300 dark:border-gray-600 text-sm h-8"
+                                        onChange={(e) =>
+                                          handleInputChange(
+                                            index,
+                                            "icms",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                      <Input
+                                        type="number"
+                                        placeholder="PIS"
+                                        className="border-gray-300 dark:border-gray-600 text-sm h-8"
+                                        onChange={(e) =>
+                                          handleInputChange(
+                                            index,
+                                            "pis",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                      <Input
+                                        type="number"
+                                        placeholder="COFINS"
+                                        className="border-gray-300 dark:border-gray-600 text-sm h-8"
+                                        onChange={(e) =>
+                                          handleInputChange(
+                                            index,
+                                            "cofins",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                      <Input
+                                        type="number"
+                                        placeholder="IPI"
+                                        className="border-gray-300 dark:border-gray-600 text-sm h-8"
+                                        onChange={(e) =>
+                                          handleInputChange(
+                                            index,
+                                            "ipi",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                      <Input
+                                        type="number"
+                                        placeholder="ISS"
+                                        className="border-gray-300 dark:border-gray-600 text-sm h-8 col-span-2"
+                                        onChange={(e) =>
+                                          handleInputChange(
+                                            index,
+                                            "iss",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full text-xs h-7"
+                                  onClick={() => removerMes(mes.value)}
+                                >
+                                  <X className="h-3 w-3 mr-1" />
+                                  Remover Mês
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -925,67 +969,53 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
                 !empresaSelecionada ||
                 atividadesSelecionadas.length === 0 ||
                 meses.length === 0 ||
-                dadosApuracao.length === 0 ||
-                !mesReferenciaSelecionado || // Validar se o mês de referência foi selecionado
                 carregandoAnalise
               }
-              className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-md"
+              className="w-full"
             >
               {carregandoAnalise ? (
                 <>
-                  <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
-                  Gerando análise...
+                  <Sparkles className="h-4 w-4 mr-2 animate-pulse" />
+                  Gerando...
                 </>
               ) : (
                 <>
-                  <Calculator className="mr-2 h-4 w-4" />
-                  Gerar Análise Tributária
+                  <Calculator className="h-4 w-4 mr-2" />
+                  Gerar Análise
                 </>
               )}
             </Button>
           </CardFooter>
         </Card>
-
-        {/* Painel de resultado melhorado */}
-        <Card className="border-emerald-200 dark:border-emerald-900/30 bg-white dark:bg-gray-900 shadow-lg">
+        {/* Painel de Resultado */}
+        <Card className="border-gray-200 dark:border-gray-700">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-emerald-800 dark:text-emerald-100">
-              <Sparkles className="h-5 w-5 text-emerald-500" />
-              Análise Inteligente
-              <Badge
-                variant="outline"
-                className="ml-2 bg-blue-50 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
-              >
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Análise Gerada
+              <Badge variant="secondary" className="ml-2">
                 Claude
               </Badge>
             </CardTitle>
-            <CardDescription className="text-emerald-600 dark:text-emerald-300">
+            <CardDescription>
               {empresa
-                ? `Análise especializada para ${empresa.razaoSocial}`
-                : "Selecione uma empresa para gerar a análise"}
+                ? `Análise para ${empresa.razaoSocial}`
+                : "Selecione uma empresa"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {carregandoAnalise ? (
-              <div className="space-y-4 py-8">
-                <div className="text-center">
-                  <Sparkles className="h-12 w-12 mx-auto mb-4 text-emerald-500 animate-pulse" />
-                  <p className="text-emerald-700 dark:text-emerald-300 font-medium">
-                    Gerando análise inteligente...
-                  </p>
-                  <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-2">
-                    Isso pode levar alguns segundos
-                  </p>
-                </div>
-                <div className="flex justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-                </div>
+              <div className="space-y-4 py-8 text-center">
+                <Sparkles className="h-8 w-8 mx-auto text-primary animate-pulse" />
+                <p className="text-sm text-gray-500">
+                  Gerando análise inteligente...
+                </p>
               </div>
             ) : analise ? (
-              <div className="bg-emerald-50 dark:bg-gray-800 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                <div className="prose prose-emerald max-w-none dark:prose-invert">
+              <div className=" p-4 rounded-md border border-gray-200 dark:border-gray-700">
+                <div className="prose prose-sm max-w-none dark:prose-invert">
                   <div
-                    className="analise-tributaria-content"
+                    className="analise-tributaria-content whitespace-pre-wrap text-sm"
                     dangerouslySetInnerHTML={{
                       __html: analise
                         .replace(/\n/g, "<br />")
@@ -996,42 +1026,24 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
                 </div>
               </div>
             ) : (
-              <div className="text-center py-12 text-emerald-600 dark:text-emerald-400">
-                <div className="flex justify-center mb-4">
-                  <div className="relative">
-                    <Sparkles className="h-12 w-12 text-emerald-500" />
-                    <TrendingUp className="h-6 w-6 text-blue-500 absolute -right-2 -bottom-1" />
-                  </div>
-                </div>
-                <h3 className="font-medium text-lg mb-2">
-                  Análise Tributária Inteligente
-                </h3>
-                <p className="max-w-md mx-auto">
+              <div className="text-center py-12 text-muted-foreground">
+                <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">
                   Preencha os dados à esquerda e clique em "Gerar Análise" para
-                  obter uma análise completa com recomendações personalizadas da
-                  nossa IA especializada.
+                  obter uma análise completa com recomendações personalizadas.
                 </p>
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-start gap-3">
-                    <Lightbulb className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                      <strong>Dica:</strong> Quanto mais dados você fornecer,
-                      mais precisa será a análise da nossa IA especializada em
-                      tributação brasileira.
-                    </p>
-                  </div>
-                </div>
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex flex-col space-y-3">
+          <CardFooter className="flex flex-col space-y-2">
             <Button
               onClick={copiarParaAreaTransferencia}
               disabled={!analise}
               variant="outline"
-              className="w-full border-emerald-200 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+              size="sm"
+              className="w-full"
             >
-              <Copy className="mr-2 h-4 w-4" />
+              <Copy className="h-4 w-4 mr-2" />
               Copiar Análise
             </Button>
             {analise && (
@@ -1041,17 +1053,18 @@ Gere o e-mail completo em português brasileiro, pronto para ser copiado e envia
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
                   a.href = url;
-                  a.download = `analise-tributaria-${empresa?.razaoSocial || "empresa"}.txt`;
+                  a.download = `analise-${empresa?.razaoSocial || "empresa"}.txt`;
                   document.body.appendChild(a);
                   a.click();
                   document.body.removeChild(a);
                   URL.revokeObjectURL(url);
                 }}
                 variant="outline"
-                className="w-full border-blue-200 text-blue-700 dark:border-blue-800 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                size="sm"
+                className="w-full"
               >
-                <FileText className="mr-2 h-4 w-4" />
-                Exportar como TXT
+                <Download className="h-4 w-4 mr-2" />
+                Exportar TXT
               </Button>
             )}
           </CardFooter>
