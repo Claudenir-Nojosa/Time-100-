@@ -12,7 +12,14 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Download, Copy, BarChart3 } from "lucide-react";
+import {
+  ArrowLeft,
+  FileText,
+  Download,
+  Copy,
+  BarChart3,
+  FileDown,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface AnaliseDetalhes {
@@ -32,6 +39,7 @@ export default function AnaliseDetalhesPage() {
   const router = useRouter();
   const [analise, setAnalise] = useState<AnaliseDetalhes | null>(null);
   const [loading, setLoading] = useState(true);
+  const [gerandoWord, setGerandoWord] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -86,7 +94,6 @@ export default function AnaliseDetalhesPage() {
   };
 
   const gerarPDFProfissional = async () => {
-    // Verificar se analise não é null
     if (!analise) {
       toast.error("Nenhuma análise disponível para gerar PDF");
       return;
@@ -100,7 +107,7 @@ export default function AnaliseDetalhesPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ analiseId: analise.id }), // Agora analise não é null
+        body: JSON.stringify({ analiseId: analise.id }),
       });
 
       if (!response.ok) {
@@ -121,6 +128,47 @@ export default function AnaliseDetalhesPage() {
     } catch (error) {
       console.error("Erro:", error);
       toast.error("Erro ao gerar PDF");
+    }
+  };
+
+  const gerarWordProfissional = async () => {
+    if (!analise) {
+      toast.error("Nenhuma análise disponível para gerar Word");
+      return;
+    }
+
+    try {
+      setGerandoWord(true);
+      toast.loading("Gerando documento Word...");
+
+      const response = await fetch("/api/gerar-word-profissional", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ analiseId: analise.id }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao gerar documento Word");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relatorio-profissional-${analise.empresa.razaoSocial}-${analise.mesReferencia}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Documento Word gerado com sucesso!");
+    } catch (error) {
+      console.error("Erro:", error);
+      toast.error("Erro ao gerar documento Word");
+    } finally {
+      setGerandoWord(false);
     }
   };
 
@@ -166,26 +214,34 @@ export default function AnaliseDetalhesPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={copiarParaAreaTransferencia}>
             <Copy className="mr-2 h-4 w-4" />
             Copiar
           </Button>
           <Button variant="outline" onClick={exportarComoTxt}>
             <Download className="mr-2 h-4 w-4" />
-            Exportar
-          </Button>
-          <Button onClick={acessarDashboard}>
-            <BarChart3 className="mr-2 h-4 w-4" />
-            Acessar Dashboard
+            Exportar TXT
           </Button>
           <Button
             variant="outline"
             onClick={gerarPDFProfissional}
-            disabled={!analise} // Desabilita o botão se analise for null
+            disabled={!analise}
           >
             <FileText className="mr-2 h-4 w-4" />
-            Relatório Profissional
+            PDF Profissional
+          </Button>
+          <Button
+            variant="outline"
+            onClick={gerarWordProfissional}
+            disabled={!analise || gerandoWord}
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            {gerandoWord ? "Gerando..." : "Word Profissional"}
+          </Button>
+          <Button onClick={acessarDashboard}>
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Dashboard
           </Button>
         </div>
       </div>

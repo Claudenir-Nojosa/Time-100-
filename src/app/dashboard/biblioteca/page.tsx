@@ -46,16 +46,6 @@ import {
   EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
 
 // Definição da interface para BaseLegal
 interface ArquivoBaseLegal {
@@ -131,6 +121,8 @@ const estadosBrasileiros = [
   { sigla: "SE", nome: "Sergipe" },
   { sigla: "TO", nome: "Tocantins" },
 ];
+
+const opcoesFederais = [{ sigla: "FED", nome: "Base Federal" }];
 
 // Tipos de tributo
 const tiposTributo = [
@@ -387,47 +379,6 @@ export default function BibliotecaPage() {
       setCarregando(false);
     }
   };
-  const aplicarFiltros = (bases: BaseLegal[]) => {
-    let filtered = bases;
-
-    // Filtro por tags
-    if (filtros.tags.length > 0) {
-      filtered = filtered.filter((base) =>
-        filtros.tags.every((tag) => base.tags.includes(tag))
-      );
-    }
-
-    // Filtro por palavra-chave
-    if (filtros.palavraChave) {
-      const keyword = filtros.palavraChave.toLowerCase();
-      filtered = filtered.filter(
-        (base) =>
-          base.titulo.toLowerCase().includes(keyword) ||
-          base.descricao?.toLowerCase().includes(keyword) ||
-          base.anotacoes?.toLowerCase().includes(keyword) ||
-          base.tags.some((tag) => tag.toLowerCase().includes(keyword))
-      );
-    }
-
-    // Filtros adicionais
-    if (filtros.tipoTributo) {
-      filtered = filtered.filter(
-        (base) => base.tipoTributo === filtros.tipoTributo
-      );
-    }
-
-    if (filtros.categoria) {
-      filtered = filtered.filter(
-        (base) => base.categoria === filtros.categoria
-      );
-    }
-
-    if (filtros.uf) {
-      filtered = filtered.filter((base) => base.uf === filtros.uf);
-    }
-
-    setBasesFiltradas(filtered);
-  };
 
   const toggleFavorito = async (baseLegal: BaseLegal) => {
     if (!session) return;
@@ -462,11 +413,6 @@ export default function BibliotecaPage() {
       console.error("Erro ao atualizar favorito:", error);
       toast.error("Erro ao atualizar favorito");
     }
-  };
-
-  const aplicarFiltrosAutomaticos = (filtrosAtuais: typeof filtros) => {
-    console.log("Aplicando filtros automáticos:", filtrosAtuais);
-    carregarBasesLegais();
   };
 
   const handleFiltroChange = (novosFiltros: Partial<typeof filtros>) => {
@@ -524,7 +470,12 @@ export default function BibliotecaPage() {
     setBasesFiltradas(filtered);
   };
   const handleSelecionarUF = (uf: string) => {
-    setUfSelecionada(uf);
+    if (uf === "FED") {
+      // Lógica específica para bases federais
+      setUfSelecionada("FED");
+    } else {
+      setUfSelecionada(uf);
+    }
   };
 
   const adicionarTag = () => {
@@ -1529,6 +1480,35 @@ export default function BibliotecaPage() {
 
           {/* LISTA DE UFs (mantém o original) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {/* Quadrado para Base Federal */}
+            {opcoesFederais
+              .filter(
+                (federal) =>
+                  federal.nome
+                    .toLowerCase()
+                    .includes(termoPesquisa.toLowerCase()) ||
+                  federal.sigla
+                    .toLowerCase()
+                    .includes(termoPesquisa.toLowerCase())
+              )
+              .map((federal) => (
+                <Card
+                  key={federal.sigla}
+                  className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 border-orange-300 dark:border-orange-500/60 shadow-md"
+                  onClick={() => handleSelecionarUF(federal.sigla)}
+                >
+                  <CardContent className="p-4 flex flex-col items-center justify-center h-24 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30">
+                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">
+                      {federal.sigla}
+                    </div>
+                    <div className="text-sm text-center mt-2 text-orange-700 dark:text-orange-200/90">
+                      {federal.nome}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+            {/* Estados brasileiros */}
             {estadosBrasileiros
               .filter(
                 (estado) =>
@@ -1569,10 +1549,10 @@ export default function BibliotecaPage() {
               </Button>
               <h2 className="text-2xl font-semibold">
                 Bases Legais -{" "}
-                {
-                  estadosBrasileiros.find((e) => e.sigla === ufSelecionada)
-                    ?.nome
-                }
+                {ufSelecionada === "FED"
+                  ? "Base Federal"
+                  : estadosBrasileiros.find((e) => e.sigla === ufSelecionada)
+                      ?.nome}
               </h2>
             </div>
             <Button
@@ -2244,7 +2224,7 @@ export default function BibliotecaPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => toggleFavorito(base)}
-                        className="h-8 w-8 text-yellow-400 hover:text-yellow-600 hover:bg-transparent"
+                        className="h-8 w-8 pl-16 pb-16  text-yellow-400 hover:text-yellow-600 hover:bg-transparent"
                         title={
                           base.favoritos?.some(
                             (f: BaseLegalFavorito) =>
