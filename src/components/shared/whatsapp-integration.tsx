@@ -3,11 +3,17 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {  QrCode, Link, MessageSquare } from "lucide-react";
+import { QrCode, Link, MessageSquare, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { FaWhatsapp } from "react-icons/fa";
 
@@ -15,13 +21,16 @@ export function WhatsAppIntegration() {
   const [isConnected, setIsConnected] = useState(false);
   const [qrCode, setQrCode] = useState<string>("");
   const [webhookUrl, setWebhookUrl] = useState("");
+  const [testMessage, setTestMessage] = useState("Gastei 50 reais no almoço");
+  const [testNumber, setTestNumber] = useState("85991486998");
+  const [isSending, setIsSending] = useState(false);
 
   const connectWhatsApp = async () => {
     try {
       const response = await fetch("/api/whatsapp/connect", {
         method: "POST",
       });
-      
+
       const data = await response.json();
       if (data.qrCode) {
         setQrCode(data.qrCode);
@@ -45,7 +54,7 @@ export function WhatsAppIntegration() {
     }
   };
 
-  const testMessage = async () => {
+  const testMessageAPI = async () => {
     try {
       const response = await fetch("/api/whatsapp/test", {
         method: "POST",
@@ -57,7 +66,7 @@ export function WhatsAppIntegration() {
           from: "Claudenir",
         }),
       });
-      
+
       const data = await response.json();
       toast.success("Mensagem testada: " + data.resposta);
     } catch (error) {
@@ -65,11 +74,44 @@ export function WhatsAppIntegration() {
     }
   };
 
+  const sendTestMessage = async () => {
+    if (!testMessage || !testNumber) {
+      toast.error("Preencha a mensagem e o número");
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const response = await fetch("/api/test-whatsapp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: testMessage,
+          to: testNumber,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("✅ Mensagem enviada para: " + data.to);
+      } else {
+        toast.error("❌ Erro: " + data.error);
+      }
+    } catch (error) {
+      toast.error("❌ Erro ao enviar mensagem");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-           <FaWhatsapp className="h-5 w-5 text-green-600" />
+          <FaWhatsapp className="h-5 w-5 text-green-600" />
           Integração com WhatsApp
         </CardTitle>
         <CardDescription>
@@ -87,7 +129,7 @@ export function WhatsAppIntegration() {
           <Switch
             id="whatsapp-connection"
             checked={isConnected}
-            onCheckedChange={(checked: any) => {
+            onCheckedChange={(checked) => {
               if (checked) connectWhatsApp();
               else disconnectWhatsApp();
             }}
@@ -100,12 +142,60 @@ export function WhatsAppIntegration() {
               <QrCode className="h-4 w-4" />
               <span className="text-sm font-medium">Escaneie o QR Code</span>
             </div>
-            <img src={qrCode} alt="QR Code para WhatsApp" className="w-48 h-48 mx-auto" />
+            <img
+              src={qrCode}
+              alt="QR Code para WhatsApp"
+              className="w-48 h-48 mx-auto"
+            />
             <p className="text-xs text-center text-muted-foreground mt-2">
-              Abra o WhatsApp Configurações  Dispositivos conectados  Conectar um dispositivo
+              Abra o WhatsApp → Configurações → Dispositivos conectados →
+              Conectar um dispositivo
             </p>
           </div>
         )}
+
+        {/* Seção de Teste */}
+        <div className="p-4 ">
+          <h4 className="font-medium text-sm mb-3 text-blue-800 flex items-center gap-2">
+            <Phone className="h-4 w-4" />
+            Testar Envio de Mensagem
+          </h4>
+
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="test-number">Seu Número WhatsApp</Label>
+              <Input
+                id="test-number"
+                value={testNumber}
+                onChange={(e) =>
+                  setTestNumber(e.target.value.replace(/\D/g, ""))
+                }
+                placeholder="85991486998"
+              />
+              <p className="text-xs text-blue-600">
+                Apenas números, sem espaços ou caracteres especiais
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="test-message">Mensagem de Teste</Label>
+              <Input
+                id="test-message"
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+                placeholder="Gastei 50 reais no almoço"
+              />
+            </div>
+
+            <Button
+              onClick={sendTestMessage}
+              disabled={isSending}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
+              {isSending ? "Enviando..." : "Enviar Mensagem de Teste"}
+            </Button>
+          </div>
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="webhook">Webhook URL</Label>
@@ -125,9 +215,9 @@ export function WhatsAppIntegration() {
           </p>
         </div>
 
-        <Button onClick={testMessage} className="w-full" variant="outline">
+        <Button onClick={testMessageAPI} className="w-full" variant="outline">
           <MessageSquare className="h-4 w-4 mr-2" />
-          Testar Mensagem
+          Testar Processamento de Mensagem
         </Button>
 
         <div className="p-4 bg-muted rounded-lg">
