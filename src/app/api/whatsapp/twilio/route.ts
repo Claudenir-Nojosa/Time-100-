@@ -59,7 +59,7 @@ EXEMPLOS:
       const claudeData = await callClaudeApi(prompt);
       const resposta = claudeData.content[0].text;
 
-      // Extrair JSON da resposta
+      // Extrair JSON da resposta s
       const jsonMatch = resposta.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error("JSON não encontrado na resposta do Claude");
