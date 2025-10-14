@@ -8,8 +8,11 @@ import { findUserByCredentials } from "@/lib/user";
 
 const prisma = new PrismaClient();
 
+// Type assertion para resolver o conflito de tipos
+const adapter = PrismaAdapter(prisma) as any;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: adapter,
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID!,
@@ -24,16 +27,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Email e senha são obrigatórios");
         }
-        
+
         const user = await findUserByCredentials(
           credentials.email as string,
           credentials.password as string
         );
-        
+
         if (!user) {
           throw new Error("Credenciais inválidas");
         }
-        
+
         return user;
       },
     }),
@@ -100,12 +103,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id;
       }
-      
-      // Atualizar token quando a sessão for atualizada
+
       if (trigger === "update" && session) {
         token = { ...token, ...session };
       }
-      
+
       return token;
     },
 
@@ -131,7 +133,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             session.user.id = user.id;
             session.user.name = user.name;
             session.user.email = user.email;
-            session.user.image = user.image;
             (session.user as any).subscriptionStatus = user.subscriptionStatus;
           }
         } catch (error) {
@@ -148,7 +149,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 dias
+    maxAge: 30 * 24 * 60 * 60,
   },
-  trustHost: true, // Importante para v5
+  trustHost: true,
 });
