@@ -91,9 +91,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
 
-    async jwt({ token, user, account, profile }) {
-      console.log("JWT callback - user:", user);
-
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
       }
@@ -101,10 +99,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async session({ session, token }) {
-      console.log("Session callback - token.sub:", token.sub);
-      console.log("Session callback - session.user ANTES:", session.user);
-
-      // Garantir que temos um ID válido
       const userId = token.sub || token.id;
 
       if (session.user && userId) {
@@ -122,8 +116,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
           });
 
-          console.log("Usuário encontrado no banco:", user);
-
           if (user) {
             session.user.id = user.id;
             session.user.name = user.name;
@@ -135,7 +127,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
-      console.log("Session callback - session.user DEPOIS:", session.user);
       return session;
     },
   },
@@ -147,7 +138,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
-  // REMOVA trustHost e use useSecureCookies em vez disso:
   useSecureCookies: process.env.NODE_ENV === "production",
   debug: process.env.NODE_ENV === "development",
 });
