@@ -3,12 +3,12 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { PrismaClient } from "@prisma/client";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import { findUserByCredentials } from "@/lib/user";
 
 const prisma = new PrismaClient();
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
     Google({
@@ -17,8 +17,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
     Credentials({
       credentials: {
-        email: {},
-        password: {},
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
         if (!credentials?.email || !credentials?.password) {
@@ -29,6 +29,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           credentials.email as string,
           credentials.password as string
         );
+        
+        if (!user) {
+          throw new Error("Credenciais inválidas");
+        }
+        
         return user;
       },
     }),
@@ -91,10 +96,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
 
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
       }
+      
+      // Atualizar token quando a sessão for atualizada
+      if (trigger === "update" && session) {
+        token = { ...token, ...session };
+      }
+      
       return token;
     },
 
@@ -120,6 +131,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             session.user.id = user.id;
             session.user.name = user.name;
             session.user.email = user.email;
+            session.user.image = user.image;
             (session.user as any).subscriptionStatus = user.subscriptionStatus;
           }
         } catch (error) {
@@ -136,8 +148,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 30 * 24 * 60 * 60, // 30 dias
   },
-  useSecureCookies: process.env.NODE_ENV === "production",
-  debug: process.env.NODE_ENV === "development",
+  trustHost: true, // Importante para v5
 });
