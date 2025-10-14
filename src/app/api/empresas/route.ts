@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     }
 
     // Verificar se o usuário existe
-    const usuario = await prisma.usuario.findUnique({
+    const usuario = await prisma.user.findUnique({
       where: { id: body.usuarioId },
       select: { id: true, email: true },
     });
@@ -68,62 +68,7 @@ export async function POST(request: Request) {
         regimeTributacao: body.regimeTributacao,
         responsavel: body.responsavel,
         observacoes: body.observacoes,
-        usuarioId: body.usuarioId,
-
-        obrigacoesAcessorias:
-          body.obrigacoesAcessorias?.length > 0
-            ? {
-                create: body.obrigacoesAcessorias.map((oa: any) => ({
-                  obrigacaoAcessoria: {
-                    connect: { id: oa.obrigacaoAcessoriaId },
-                  },
-                  diaVencimento: oa.diaVencimento,
-                  anteciparDiaNaoUtil: oa.anteciparDiaNaoUtil,
-                })),
-              }
-            : undefined,
-
-        obrigacoesPrincipais:
-          body.obrigacoesPrincipais?.length > 0
-            ? {
-                create: body.obrigacoesPrincipais.map((op: any) => ({
-                  obrigacaoPrincipal: {
-                    connect: { id: op.obrigacaoPrincipalId },
-                  },
-                  diaVencimento: op.diaVencimento,
-                  anteciparDiaNaoUtil: op.anteciparDiaNaoUtil,
-                  aliquota: op.aliquota || 0,
-                  descricao: op.descricao || null,
-                  uf: op.uf || null,
-                })),
-              }
-            : undefined,
-
-        parcelamentos:
-          body.parcelamentos?.length > 0
-            ? {
-                create: body.parcelamentos.map((p: any, index: number) => ({
-                  numero: index + 1,
-                  valor: p.debitoConsolidado,
-                  dataVencimento: new Date(p.dataVencimento),
-                  observacoes: p.observacoes || null,
-                  status: "PENDENTE",
-                })),
-              }
-            : undefined,
-      },
-      include: {
-        obrigacoesAcessorias: {
-          include: {
-            obrigacaoAcessoria: true,
-          },
-        },
-        obrigacoesPrincipais: {
-          include: {
-            obrigacaoPrincipal: true,
-          },
-        },
-        parcelamentos: true,
+        userId: body.usuarioId,
       },
     });
 
@@ -158,10 +103,6 @@ export async function POST(request: Request) {
     console.log("[API] Empresa e status criados com sucesso:", {
       id: novaEmpresa.id,
       cnpj: novaEmpresa.cnpj,
-      totalObrigacoes:
-        novaEmpresa.obrigacoesAcessorias.length +
-        novaEmpresa.obrigacoesPrincipais.length,
-      totalParcelamentos: novaEmpresa.parcelamentos.length,
       statusId: statusEmpresa.id,
     });
 

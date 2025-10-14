@@ -19,7 +19,7 @@ export async function PUT(
       where: { id },
       data: { concluida },
       include: {
-        usuario: {
+        user: {
           select: {
             name: true,
             email: true,
@@ -57,7 +57,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Pendência não encontrada' }, { status: 404 });
     }
 
-    if (pendencia.usuarioId !== session.user.id) {
+    if (pendencia.userId !== session.user.id) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
     }
 

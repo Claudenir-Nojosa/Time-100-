@@ -14,7 +14,7 @@ export async function GET() {
       // Remova o where clause que filtra por usuarioId
       orderBy: { criadoEm: 'desc' },
       include: {  // Adicione isto para incluir informações do usuário
-        usuario: {
+        user: {
           select: {
             name: true,
             email: true,
@@ -46,10 +46,10 @@ export async function POST(request: Request) {
       data: {
         titulo,
         descricao,
-        usuarioId: session.user.id, // Mantém o usuário que criou
+        userId: session.user.id, // Mantém o usuário que criou
       },
       include: {  // Adicione isto para incluir informações do usuário
-        usuario: {
+        user: {
           select: {
             name: true,
             email: true,

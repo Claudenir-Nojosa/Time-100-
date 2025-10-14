@@ -27,7 +27,7 @@ export default async function loginAction(_prevState: any, formData: FormData) {
     });
 
     // Verifica se o usuário já completou o onboarding
-    const user = await db.usuario.findUnique({
+    const user = await db.user.findUnique({
       where: { email },
     });
 

@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const uf = searchParams.get("uf");
-    const usuarioId = searchParams.get("usuarioId");
+    const userId = searchParams.get("userId");
     const apenasFavoritos = searchParams.get("apenasFavoritos") === "true";
     const tags = searchParams.get("tags")?.split(",") || [];
     const palavraChave = searchParams.get("palavraChave") || "";
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
     console.log("[API BASES LEGAIS] Parâmetros recebidos:", {
       uf,
-      usuarioId,
+      userId,
       apenasFavoritos,
       tags,
       palavraChave,
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     });
 
     // Validação dos campos obrigatórios
-    if (!usuarioId) {
+    if (!userId) {
       console.error("[API BASES LEGAIS] ID do usuário não especificado");
       return NextResponse.json(
         { error: "ID do usuário não especificado" },
@@ -40,13 +40,13 @@ export async function GET(request: Request) {
     }
 
     // Verificar se o usuário existe
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: usuarioId },
+    const usuario = await prisma.user.findUnique({
+      where: { id: userId },
       select: { id: true, email: true },
     });
 
     if (!usuario) {
-      console.error("[API BASES LEGAIS] Usuário não encontrado:", usuarioId);
+      console.error("[API BASES LEGAIS] Usuário não encontrado:", userId);
       return NextResponse.json(
         { error: "Usuário não encontrado" },
         { status: 404 }
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 
     // Construir condições where - CORREÇÃO AQUI
     const whereConditions: any = {
-      usuarioId,
+      userId,
     };
 
     if (uf) {
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
       console.log("[API] Aplicando filtro de favoritos");
       whereConditions.favoritos = {
         some: {
-          usuarioId: usuarioId,
+          userId: userId,
         },
       };
     } else {
@@ -140,12 +140,12 @@ export async function GET(request: Request) {
         ArquivoBaseLegal: true,
         favoritos: {
           where: {
-            usuarioId: usuarioId,
+            userId: userId,
           },
         },
         Anotacao: {
           where: {
-            usuarioId: usuarioId,
+            userId: userId,
           },
           select: {
             id: true,
@@ -228,13 +228,13 @@ export async function POST(request: NextRequest) {
     const tipoTributo = formData.get("tipoTributo") as string;
     const anotacoes = formData.get("anotacoes") as string;
     const status = formData.get("status") as string;
-    const usuarioId = formData.get("usuarioId") as string;
+    const userId = formData.get("userId") as string;
     const arquivos = formData.getAll("arquivos") as File[];
 
     console.log("[API BASES LEGAIS] Dados recebidos:", {
       titulo,
       uf,
-      usuarioId,
+      userId,
       categoria,
       tipoTributo,
       arquivosCount: arquivos.length,
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
     const camposObrigatorios = [
       { field: "titulo", value: titulo },
       { field: "uf", value: uf },
-      { field: "usuarioId", value: usuarioId },
+      { field: "userId", value: userId },
     ];
 
     const camposFaltantes = camposObrigatorios.filter((campo) => !campo.value);
@@ -263,13 +263,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o usuário existe
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: usuarioId },
+    const usuario = await prisma.user.findUnique({
+      where: { id: userId },
       select: { id: true, email: true },
     });
 
     if (!usuario) {
-      console.error("[API BASES LEGAIS] Usuário não encontrado:", usuarioId);
+      console.error("[API BASES LEGAIS] Usuário não encontrado:", userId);
       return NextResponse.json(
         { error: "Usuário não encontrado" },
         { status: 404 }
@@ -291,7 +291,7 @@ export async function POST(request: NextRequest) {
         tipoTributo: tipoTributo || "",
         anotacoes: anotacoes || "",
         status: status || "Vigente",
-        usuarioId,
+        userId,
       },
     });
 

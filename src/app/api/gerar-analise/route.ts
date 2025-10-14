@@ -4,13 +4,13 @@ import db from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, empresaId, usuarioId, mesReferencia, dadosApuracao } =
+    const { prompt, empresaId, userId, mesReferencia, dadosApuracao } =
       await request.json();
 
     console.log("Dados recebidos na API:", {
       temPrompt: !!prompt,
       empresaId,
-      usuarioId,
+      userId,
       mesReferencia,
       temDadosApuracao: !!dadosApuracao,
       quantidadeMeses: dadosApuracao?.length || 0,
@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
       throw new Error("Não foi possível gerar a análise");
     }
 
-    // Salvar no banco de dados se tiver empresaId e usuarioId
-    if (empresaId && usuarioId && mesReferencia) {
+    // Salvar no banco de dados se tiver empresaId e userId
+    if (empresaId && userId && mesReferencia) {
       console.log("Salvando no banco de dados...");
 
       // Extrair indicadores detalhados para dashboards
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         await db.analiseTributaria.create({
           data: {
             empresaId,
-            usuarioId,
+            userId,
             mesReferencia,
             dadosApuracao: dadosApuracao,
             analiseTexto: analise,
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       analise,
-      salvoNoBanco: !!(empresaId && usuarioId && mesReferencia),
+      salvoNoBanco: !!(empresaId && userId && mesReferencia),
     });
   } catch (error) {
     console.error("Erro ao gerar análise:", error);

@@ -6,9 +6,9 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { baseLegalId, usuarioId } = await request.json();
+    const { baseLegalId, userId } = await request.json();
 
-    console.log("[API FAVORITOS] Dados recebidos:", { baseLegalId, usuarioId });
+    console.log("[API FAVORITOS] Dados recebidos:", { baseLegalId, userId });
 
     // Verificar se a base legal existe
     const baseLegal = await prisma.baseLegal.findUnique({
@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
     // Verificar se já é favorito
     const favoritoExistente = await prisma.baseLegalFavorito.findUnique({
       where: {
-        baseLegalId_usuarioId: {
+        baseLegalId_userId: {
           baseLegalId,
-          usuarioId,
+          userId,
         },
       },
     });
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       await prisma.baseLegalFavorito.create({
         data: {
           baseLegalId,
-          usuarioId,
+          userId,
         },
       });
       console.log("[API FAVORITOS] Favorito adicionado");

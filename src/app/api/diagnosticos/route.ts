@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o usuário existe
-    const usuario = await prisma.usuario.findUnique({
+    const usuario = await prisma.user.findUnique({
       where: { id: usuarioId },
       select: { id: true, email: true },
     });
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         nomeEmpresa,
         status: status || "Concluído",
         formData: formData || {},
-        usuario: {
+        user: {
           connect: { id: usuarioId },
         },
       },
@@ -81,11 +81,11 @@ export async function GET(request: Request) {
     console.log("[API DIAGNOSTICOS] Iniciando processamento da requisição GET...");
 
     const { searchParams } = new URL(request.url);
-    const usuarioId = searchParams.get("usuarioId");
+    const userId = searchParams.get("userId");
 
-    console.log("[API DIAGNOSTICOS] Parâmetros recebidos:", { usuarioId });
+    console.log("[API DIAGNOSTICOS] Parâmetros recebidos:", { userId });
 
-    if (!usuarioId) {
+    if (!userId) {
       console.error("[API DIAGNOSTICOS] ID do usuário não especificado");
       return NextResponse.json(
         { error: "ID do usuário não especificado" },
@@ -96,7 +96,7 @@ export async function GET(request: Request) {
     // Buscar diagnósticos do usuário
     const diagnosticos = await prisma.diagnostico.findMany({
       where: {
-        usuarioId,
+        userId,
       },
       orderBy: {
         data: "desc",
