@@ -37,51 +37,6 @@ export async function GET() {
   }
 }
 
-// PUT atualizar atividade - CORRIGIDO
-export async function PUT(
-  request: NextRequest, // ← Mude para NextRequest
-  { params }: { params: Promise<{ id: string }> } // ← params é Promise
-) {
-  try {
-    const { id } = await params; // ← Aguarde a Promise
-    const { nome, horario, responsavel, data, concluida, categoria, ordem } =
-      await request.json();
-
-    const atividade = await db.atividade.update({
-      where: { id },
-      data: {
-        nome,
-        horario,
-        responsavel,
-        data: new Date(data),
-        concluida,
-        categoria,
-        ordem,
-      },
-      select: {
-        id: true,
-        nome: true,
-        horario: true,
-        responsavel: true,
-        responsavelId: true,
-        responsavelImg: true,
-        data: true,
-        concluida: true,
-        categoria: true,
-        ordem: true,
-      },
-    });
-
-    return NextResponse.json(atividade);
-  } catch (error) {
-    console.error("Erro ao atualizar atividade:", error);
-    return NextResponse.json(
-      { error: "Erro ao atualizar atividade" },
-      { status: 500 }
-    );
-  }
-}
-
 // POST nova atividade - CORRIGIDO
 export async function POST(request: NextRequest) { // ← Mude para NextRequest
   try {
