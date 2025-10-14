@@ -1,20 +1,20 @@
 // app/api/atividades/[id]/reordenar/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import db from "@/lib/db";
 
 export async function PUT(
-  request: Request,
+  request: NextRequest, // ← Mude para NextRequest
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await params; // ← Aguarde a Promise
     const { ordem, data } = await request.json();
 
     const atividade = await db.atividade.update({
       where: { id },
       data: {
         ordem,
-        data: new Date(data), // Atualiza a data se necessário
+        data: new Date(data),
       },
       select: {
         id: true,
@@ -26,15 +26,15 @@ export async function PUT(
         data: true,
         concluida: true,
         categoria: true,
-        ordem: true, // ← Inclua o campo ordem
+        ordem: true,
       },
     });
 
     return NextResponse.json(atividade);
   } catch (error) {
-    console.error('Erro ao reordenar atividade:', error);
+    console.error("Erro ao reordenar atividade:", error);
     return NextResponse.json(
-      { error: 'Erro ao reordenar atividade' },
+      { error: "Erro ao reordenar atividade" },
       { status: 500 }
     );
   }

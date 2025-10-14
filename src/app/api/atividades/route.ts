@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 
 // GET todas as atividades
@@ -7,7 +7,7 @@ export async function GET() {
     const atividades = await db.atividade.findMany({
       orderBy: [
         { data: "asc" },
-        { ordem: "asc" }, // ← Adicione ordenação por ordem
+        { ordem: "asc" },
       ],
       select: {
         id: true,
@@ -19,7 +19,7 @@ export async function GET() {
         data: true,
         concluida: true,
         categoria: true,
-        ordem: true, // ← Adicione este campo
+        ordem: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -37,13 +37,13 @@ export async function GET() {
   }
 }
 
-// PUT atualizar atividade
+// PUT atualizar atividade - CORRIGIDO
 export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest, // ← Mude para NextRequest
+  { params }: { params: Promise<{ id: string }> } // ← params é Promise
 ) {
   try {
-    const { id } = await params;
+    const { id } = await params; // ← Aguarde a Promise
     const { nome, horario, responsavel, data, concluida, categoria, ordem } =
       await request.json();
 
@@ -56,7 +56,7 @@ export async function PUT(
         data: new Date(data),
         concluida,
         categoria,
-        ordem, // ← Adicione este campo
+        ordem,
       },
       select: {
         id: true,
@@ -68,7 +68,7 @@ export async function PUT(
         data: true,
         concluida: true,
         categoria: true,
-        ordem: true, // ← Adicione este campo
+        ordem: true,
       },
     });
 
@@ -82,8 +82,8 @@ export async function PUT(
   }
 }
 
-// POST nova atividade (mantido igual)
-export async function POST(request: Request) {
+// POST nova atividade - CORRIGIDO
+export async function POST(request: NextRequest) { // ← Mude para NextRequest
   try {
     const body = await request.json();
     console.log("Dados recebidos:", body);
