@@ -8,10 +8,12 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model Usuario {
+// MODELOS DO NEXT AUTH (OBRIGATÓRIOS)
+model User {
   id                   String    @id @default(cuid())
   name                 String
   email                String    @unique
+  emailVerified        DateTime?
   password             String?
   image                String?
   subscriptionStatus   String    @default("free")
@@ -19,64 +21,87 @@ model Usuario {
   stripeCustomerId     String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
-  Account              Account[]
-  Empresa              Empresa[]
 
-  Pendencia Pendencia[]
+  // NextAuth relationships
+  accounts Account[]
+  sessions Session[]
 
-  BaseLegal BaseLegal[]
+  // Seus relacionamentos existentes (atualizados)
+  empresas            Empresa[]
+  pendencias          Pendencia[]
+  baseLegais          BaseLegal[]
+  anotacoes           Anotacao[]
+  diagnosticos        Diagnostico[]
+  baseLegalFavoritos  BaseLegalFavorito[]
+  analisesTributarias AnaliseTributaria[]
+  mapeamentosTelefone MapeamentoTelefone[]
+  pontos              Pontos[]
 
-  Anotacao Anotacao[]
+  metaPontos       MetaPontos[]
+  categorias       Categoria[]
+  cartoes          Cartao[]
+  lancamentos      Lancamento[]
+  pagamentosFatura PagamentoFatura[]
 
-  Diagnostico       Diagnostico[]
-  BaseLegalFavorito BaseLegalFavorito[]
+  lancamentosCompartilhadosCriados   LancamentoCompartilhado[] @relation("LancamentosCompartilhadosCriados")
+  lancamentosCompartilhadosRecebidos LancamentoCompartilhado[] @relation("LancamentosCompartilhadosRecebidos")
 
-  AnaliseTributaria AnaliseTributaria[]
-
-  Gasto Gasto[]
-
-  MapeamentoTelefone MapeamentoTelefone[]
+  Lancamento Lancamento[] @relation("LancamentosCompartilhadosCriados")
 }
 
 model Account {
   id                String  @id @default(cuid())
-  usuarioId         String
+  userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
+  id_token          String? @db.Text
   session_state     String?
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
 
-model Empresa {
-  id                   String                      @id @default(cuid())
-  razaoSocial          String
-  cnpj                 String                      @unique
-  inscricaoEstadual    String?
-  email                String?
-  cidade               String?
-  uf                   String
-  regimeTributacao     RegimeTributacao
-  responsavel          String
-  observacoes          String?
-  createdAt            DateTime                    @default(now())
-  updatedAt            DateTime                    @updatedAt
-  usuarioId            String
-  obrigacoesAcessorias EmpresaObrigacaoAcessoria[]
-  obrigacoesPrincipais EmpresaObrigacaoPrincipal[]
-  parcelamentos        Parcelamento[]
-  status               StatusEmpresa?
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// SEUS MODELOS EXISTENTES (ATUALIZADOS)
+model Empresa {
+  id                String           @id @default(cuid())
+  razaoSocial       String
+  cnpj              String           @unique
+  inscricaoEstadual String?
+  email             String?
+  cidade            String?
+  uf                String
+  regimeTributacao  RegimeTributacao
+  responsavel       String
+  observacoes       String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  userId            String
+  status            StatusEmpresa?
+
+  user User @relation(fields: [userId], references: [id])
 
   AnaliseTributaria AnaliseTributaria[]
 }
@@ -105,87 +130,6 @@ enum RegimeTributacao {
   LUCRO_REAL
 }
 
-model ObrigacaoAcessoria {
-  id            String                      @id @default(cuid())
-  nome          String                      @unique
-  descricao     String?
-  periodicidade String
-  empresas      EmpresaObrigacaoAcessoria[]
-}
-
-model ObrigacaoPrincipal {
-  id        String                      @id @default(cuid())
-  nome      String                      @unique
-  descricao String?
-  empresas  EmpresaObrigacaoPrincipal[]
-}
-
-model EmpresaObrigacaoAcessoria {
-  id                   String                      @id @default(cuid())
-  empresa              Empresa                     @relation(fields: [empresaId], references: [id])
-  empresaId            String
-  obrigacaoAcessoria   ObrigacaoAcessoria          @relation(fields: [obrigacaoAcessoriaId], references: [id])
-  obrigacaoAcessoriaId String
-  diaVencimento        Int
-  anteciparDiaNaoUtil  Boolean                     @default(false)
-  observacoes          String?
-  entregas             EntregaObrigacaoAcessoria[]
-
-  @@unique([empresaId, obrigacaoAcessoriaId])
-}
-
-model EntregaObrigacaoAcessoria {
-  id                 String    @id @default(cuid())
-  empresaObrigacaoId String
-  mes                Int
-  ano                Int
-  entregue           Boolean   @default(false)
-  dataEntrega        DateTime?
-  observacoes        String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-
-  empresaObrigacao EmpresaObrigacaoAcessoria @relation(fields: [empresaObrigacaoId], references: [id])
-
-  @@unique([empresaObrigacaoId, mes, ano])
-}
-
-model EmpresaObrigacaoPrincipal {
-  id                   String             @id @default(cuid())
-  empresa              Empresa            @relation(fields: [empresaId], references: [id])
-  empresaId            String
-  obrigacaoPrincipal   ObrigacaoPrincipal @relation(fields: [obrigacaoPrincipalId], references: [id])
-  obrigacaoPrincipalId String
-  aliquota             Float
-  diaVencimento        Int
-  anteciparDiaNaoUtil  Boolean
-  descricao            String? // Nova campo para identificar o tipo de ICMS
-  uf                   String? // Para vincular a um estado específico
-  observacoes          String?
-
-  @@unique([empresaId, obrigacaoPrincipalId, descricao, uf]) // Chave composta
-}
-
-model Parcelamento {
-  id             String             @id @default(cuid())
-  empresa        Empresa            @relation(fields: [empresaId], references: [id])
-  empresaId      String
-  numero         Int
-  valor          Float
-  dataVencimento DateTime
-  status         StatusParcelamento @default(PENDENTE)
-  observacoes    String?
-
-  @@unique([empresaId, numero])
-}
-
-enum StatusParcelamento {
-  PENDENTE
-  PAGO
-  ATRASADO
-  CANCELADO
-}
-
 model Atividade {
   id             String   @id @default(cuid())
   nome           String
@@ -208,8 +152,8 @@ model Pendencia {
   concluida    Boolean  @default(false)
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
-  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
-  usuarioId    String
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
 }
 
 model BaseLegal {
@@ -222,16 +166,14 @@ model BaseLegal {
   dataPublicacao DateTime
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  usuarioId      String
-  usuario        Usuario  @relation(fields: [usuarioId], references: [id])
-  tipoTributo    String? // Novo campo: tipo de tributo (ICMS, ISS, etc.)
-  tags           String[] // Novo campo: array de tags
-  anotacoes      String? // Novo campo: anotações iniciais
-  status         String? // Novo campo: status da legislação
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  tipoTributo    String?
+  tags           String[]
+  anotacoes      String?
+  status         String?
 
-  Anotacao Anotacao[]
-
-  // Relação com arquivos (se necessário)
+  Anotacao         Anotacao[]
   ArquivoBaseLegal ArquivoBaseLegal[]
   favoritos        BaseLegalFavorito[]
 }
@@ -239,13 +181,13 @@ model BaseLegal {
 model BaseLegalFavorito {
   id          String   @id @default(cuid())
   baseLegalId String
-  usuarioId   String
+  userId      String
   createdAt   DateTime @default(now())
 
-  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
   baseLegal BaseLegal @relation(fields: [baseLegalId], references: [id])
 
-  @@unique([baseLegalId, usuarioId])
+  @@unique([baseLegalId, userId])
 }
 
 model ArquivoBaseLegal {
@@ -263,14 +205,14 @@ model Anotacao {
   id          String   @id @default(cuid())
   conteudo    String   @db.Text
   baseLegalId String
-  usuarioId   String
+  userId      String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
   baseLegal BaseLegal @relation(fields: [baseLegalId], references: [id])
 
-  @@unique([baseLegalId, usuarioId])
+  @@unique([baseLegalId, userId])
 }
 
 model Diagnostico {
@@ -280,54 +222,194 @@ model Diagnostico {
   nomeEmpresa String
   status      String
   formData    Json
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
-  usuarioId   String
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
 }
 
 model AnaliseTributaria {
-  id               String   @id @default(cuid())
-  empresaId        String
-  usuarioId        String
-  mesReferencia    String   
-  dadosApuracao    Json     
-  analiseTexto     String   @db.Text 
-  indicadores      Json     
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id            String   @id @default(cuid())
+  empresaId     String
+  userId        String
+  mesReferencia String
+  dadosApuracao Json
+  analiseTexto  String   @db.Text
+  indicadores   Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   empresa Empresa @relation(fields: [empresaId], references: [id])
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
 
   @@unique([empresaId, mesReferencia])
-}
-
-model Gasto {
-  id              String   @id @default(cuid())
-  descricao       String
-  valor           Float
-  categoria       String   // alimentacao, transporte, casa, pessoal, lazer, receita, outros
-  tipo            String   // individual, compartilhado
-  responsavel     String   // Claudenir, Esposa
-  data            DateTime
-  pago            Boolean  @default(false)
-  origem          String?  // whatsapp, manual, etc.
-  mensagemOriginal String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  usuarioId       String
-
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
 }
 
 model MapeamentoTelefone {
   id        String   @id @default(cuid())
   telefone  String   @unique
-  usuarioId String
+  userId    String
   nome      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@map("mapeamento_telefone")
+}
+
+model Pontos {
+  id           String   @id @default(cuid())
+  programa     String
+  quantidade   Int
+  descricao    String
+  data         DateTime
+  tipo         String
+  valorResgate Float?
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("pontos")
+}
+
+model MetaPontos {
+  id         String   @id @default(cuid())
+  programa   String
+  metaPontos Int
+  descricao  String?
+  dataAlvo   DateTime
+  userId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([programa, userId])
+}
+
+model Categoria {
+  id        String   @id @default(cuid())
+  nome      String
+  tipo      String
+  cor       String?  @default("#3B82F6")
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lancamentos Lancamento[]
+
+  @@unique([nome, userId, tipo])
+}
+
+model Cartao {
+  id            String   @id @default(cuid())
+  nome          String
+  bandeira      String
+  limite        Float?
+  diaFechamento Int?
+  diaVencimento Int?
+  cor           String   @default("#3B82F6")
+  observacoes   String?
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lancamentos Lancamento[]
+  Fatura      Fatura[]
+}
+
+model Lancamento {
+  id              String    @id @default(cuid())
+  descricao       String
+  valor           Float
+  tipo            String
+  metodoPagamento String
+  data            DateTime  @default(now())
+  pago            Boolean   @default(true)
+  observacoes     String?
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  categoriaId     String
+  categoria       Categoria @relation(fields: [categoriaId], references: [id])
+  cartaoId        String?
+  cartao          Cartao?   @relation(fields: [cartaoId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tipoParcelamento   String?
+  parcelasTotal      Int?
+  parcelaAtual       Int?
+  recorrente         Boolean   @default(false)
+  dataFimRecorrencia DateTime?
+
+  lancamentoPaiId   String?
+  lancamentoPai     Lancamento?  @relation("LancamentoParcelas", fields: [lancamentoPaiId], references: [id])
+  lancamentosFilhos Lancamento[] @relation("LancamentoParcelas")
+  Fatura            Fatura?      @relation(fields: [faturaId], references: [id])
+  faturaId          String?
+
+  // ADICIONE ESTES CAMPOS PARA COMPARTILHAMENTO
+  usuarioCriadorId   String?
+  usuarioCriador     User?       @relation("LancamentosCompartilhadosCriados", fields: [usuarioCriadorId], references: [id])
+  
+  LancamentoCompartilhado LancamentoCompartilhado[]
+}
+
+model Fatura {
+  id              String            @id @default(cuid())
+  cartaoId        String
+  cartao          Cartao            @relation(fields: [cartaoId], references: [id])
+  mesReferencia   String
+  dataFechamento  DateTime
+  dataVencimento  DateTime
+  valorTotal      Float             @default(0)
+  valorPago       Float             @default(0)
+  status          String            @default("ABERTA")
+  lancamentos     Lancamento[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  PagamentoFatura PagamentoFatura[]
+
+  @@unique([cartaoId, mesReferencia])
+}
+
+model PagamentoFatura {
+  id          String   @id @default(cuid())
+  faturaId    String
+  fatura      Fatura   @relation(fields: [faturaId], references: [id])
+  valor       Float
+  data        DateTime @default(now())
+  metodo      String
+  observacoes String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LancamentoCompartilhado {
+  id                 String                        @id @default(cuid())
+  lancamentoId       String                        @unique
+  usuarioCriadorId   String
+  usuarioAlvoId      String
+  status             StatusLancamentoCompartilhado @default(PENDENTE)
+  valorCompartilhado Float
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+
+  lancamento     Lancamento @relation(fields: [lancamentoId], references: [id], onDelete: Cascade)
+  usuarioCriador User       @relation("LancamentosCompartilhadosCriados", fields: [usuarioCriadorId], references: [id])
+  usuarioAlvo    User       @relation("LancamentosCompartilhadosRecebidos", fields: [usuarioAlvoId], references: [id])
+
+  @@unique([lancamentoId, usuarioAlvoId])
+}
+
+enum StatusLancamentoCompartilhado {
+  PENDENTE
+  ACEITO
+  RECUSADO
+  CANCELADO
 }
