@@ -5,7 +5,6 @@ import Google from "next-auth/providers/google";
 import { PrismaClient } from "@prisma/client";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { findUserByCredentials } from "@/lib/user";
-import { AuthError } from "next-auth";
 
 const prisma = new PrismaClient();
 
@@ -22,6 +21,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: {},
       },
       authorize: async (credentials) => {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Email e senha são obrigatórios");
+        }
+        
         const user = await findUserByCredentials(
           credentials.email as string,
           credentials.password as string
@@ -38,7 +41,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = profile?.email || user.email;
 
         if (!email) {
-          throw new AuthError("O e-mail é obrigatório para login com Google.");
+          throw new Error("O e-mail é obrigatório para login com Google.");
         }
 
         try {
@@ -67,6 +70,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                   type: account.type,
                   provider: account.provider,
                   providerAccountId: account.providerAccountId,
+                  access_token: account.access_token,
+                  expires_at: account.expires_at,
+                  token_type: account.token_type,
+                  scope: account.scope,
+                  id_token: account.id_token,
                 },
               });
             }
@@ -139,7 +147,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
-  // ADICIONE ESTAS CONFIGURAÇÕES:
-  trustHost: true,
+  // REMOVA trustHost e use useSecureCookies em vez disso:
+  useSecureCookies: process.env.NODE_ENV === "production",
   debug: process.env.NODE_ENV === "development",
 });
