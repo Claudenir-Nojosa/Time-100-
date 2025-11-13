@@ -103,38 +103,38 @@ model VerificationToken {
 
 // SEUS MODELOS EXISTENTES (ATUALIZADOS)
 model Empresa {
-  id                String         @id @default(cuid())
-  codigo            String         @unique
-  descricao         String
-  cnpj              String         @unique
-  uf                String
-  grupo             String
-  periodoCadastro   DateTime
-  situacao          SituacaoEmpresa
-  tributacao        Tributacao
-  ie                String?
-  im                String?
-  certificadoDigital Boolean       @default(false)
-  email             String?
-  
+  id                 String          @id @default(cuid())
+  codigo             String          @unique
+  descricao          String
+  cnpj               String          @unique
+  uf                 String
+  grupo              String
+  periodoCadastro    DateTime
+  situacao           SituacaoEmpresa
+  tributacao         Tributacao
+  ie                 String?
+  im                 String?
+  certificadoDigital Boolean         @default(false)
+  email              String?
+
   // 🆕 CAMPOS DE COMPLEXIDADE
-  nivelEstudoTecnico      Int?     @db.SmallInt
-  demandaDuvidas          Int?     @db.SmallInt
-  tempoOperacional        Int?     @db.SmallInt
-  organizacaoCliente      Int?     @db.SmallInt
-  volumeDocumentos        Int?     @db.SmallInt
-  diversidadeOperacoes    Int?     @db.SmallInt
-  percentualComplexidade  Float?
-  
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  userId            String
-  user              User           @relation(fields: [userId], references: [id])
-  repasse           RepasseEmpresa?
+  nivelEstudoTecnico     Int?   @db.SmallInt
+  demandaDuvidas         Int?   @db.SmallInt
+  tempoOperacional       Int?   @db.SmallInt
+  organizacaoCliente     Int?   @db.SmallInt
+  volumeDocumentos       Int?   @db.SmallInt
+  diversidadeOperacoes   Int?   @db.SmallInt
+  percentualComplexidade Float?
+
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  userId             String
+  user               User                @relation(fields: [userId], references: [id])
+  repasse            RepasseEmpresa?
+  entregas           Entrega[]
+  analiseTributarias AnaliseTributaria[]
 
   @@map("empresas")
-  entregas Entrega[]
-  analiseTributarias AnaliseTributaria[]
 }
 
 enum SituacaoEmpresa {
@@ -156,37 +156,37 @@ model RepasseEmpresa {
   observacoes String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("repasse_empresas")
 }
 
 model Obrigacao {
-  id          String   @id @default(cuid())
-  nome        String
-  descricao   String?
-  categoria   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  entregas    Entrega[]
+  id        String    @id @default(cuid())
+  nome      String
+  descricao String?
+  categoria String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  entregas  Entrega[]
 
   @@unique([nome, userId])
   @@map("obrigacoes")
 }
 
 model Entrega {
-  id           String   @id @default(cuid())
-  empresaId    String
-  obrigacaoId  String
-  mesReferencia String  // Formato: "YYYY-MM"
-  entregue     Boolean  @default(false)
-  dataEntrega  DateTime?
-  observacoes  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String    @id @default(cuid())
+  empresaId     String
+  obrigacaoId   String
+  mesReferencia String // Formato: "YYYY-MM"
+  entregue      Boolean   @default(false)
+  dataEntrega   DateTime?
+  observacoes   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   obrigacao Obrigacao @relation(fields: [obrigacaoId], references: [id], onDelete: Cascade)
@@ -194,6 +194,7 @@ model Entrega {
   @@unique([empresaId, obrigacaoId, mesReferencia])
   @@map("entregas")
 }
+
 // Adicione este modelo ao seu schema.prisma se não existir
 model AnaliseTributaria {
   id            String   @id @default(cuid())
@@ -201,6 +202,7 @@ model AnaliseTributaria {
   userId        String
   mesReferencia String
   dadosApuracao Json
+  razaoSocial   String
   analiseTexto  String   @db.Text
   indicadores   Json
   createdAt     DateTime @default(now())
@@ -211,6 +213,7 @@ model AnaliseTributaria {
 
   @@unique([empresaId, mesReferencia])
 }
+
 model Atividade {
   id             String   @id @default(cuid())
   nome           String
@@ -224,14 +227,14 @@ model Atividade {
   ordem          Int?     @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  
+
   // 🆕 NOVOS CAMPOS PARA CONTROLE DE TEMPO
-  tempoEstimado  Int?     // Tempo estimado em minutos
-  tempoReal      Int?     // Tempo real gasto em minutos
+  tempoEstimado  Int? // Tempo estimado em minutos
+  tempoReal      Int? // Tempo real gasto em minutos
   dataInicio     DateTime? // Quando a atividade foi iniciada
   dataConclusao  DateTime? // Quando a atividade foi concluída
-  emAndamento    Boolean  @default(false) // Se está sendo trabalssshada no momento
-  historicoTempo Json?    // Array de sessões de trabalho {inicio, fim, duracao}
+  emAndamento    Boolean   @default(false) // Se está sendo trabalssshada no momento
+  historicoTempo Json? // Array de sessões de trabalho {inicio, fim, duracao}
 }
 
 model Pendencia {

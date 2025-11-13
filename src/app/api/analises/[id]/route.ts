@@ -14,7 +14,7 @@ export async function GET(
       include: {
         empresa: {
           select: {
-            razaoSocial: true,
+            descricao: true,
             cnpj: true,
           },
         },

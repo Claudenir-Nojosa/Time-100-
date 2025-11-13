@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       include: {
         empresa: {
           select: {
-            razaoSocial: true
+            descricao: true
           }
         }
       }
