@@ -5,10 +5,7 @@ import db from "@/lib/db";
 export async function GET() {
   try {
     const atividades = await db.atividade.findMany({
-      orderBy: [
-        { data: "asc" },
-        { ordem: "asc" },
-      ],
+      orderBy: [{ data: "asc" }, { ordem: "asc" }],
       select: {
         id: true,
         nome: true,
@@ -22,6 +19,13 @@ export async function GET() {
         ordem: true,
         createdAt: true,
         updatedAt: true,
+        // 🆕 ADICIONE OS NOVOS CAMPOS DE TEMPO
+        tempoEstimado: true,
+        tempoReal: true,
+        dataInicio: true,
+        dataConclusao: true,
+        emAndamento: true,
+        historicoTempo: true,
       },
     });
 
@@ -37,8 +41,8 @@ export async function GET() {
   }
 }
 
-// POST nova atividade - CORRIGIDO
-export async function POST(request: NextRequest) { // ← Mude para NextRequest
+// POST nova atividade
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log("Dados recebidos:", body);
@@ -84,7 +88,7 @@ export async function POST(request: NextRequest) { // ← Mude para NextRequest
     const novaOrdem =
       atividadesDoDia.length > 0 ? (atividadesDoDia[0].ordem || 0) + 1 : 0;
 
-    // Cria a atividade com todos os campos incluindo a ordem
+    // Cria a atividade com todos os campos incluindo os novos campos de tempo
     const atividade = await db.atividade.create({
       data: {
         nome: body.nome,
@@ -96,6 +100,13 @@ export async function POST(request: NextRequest) { // ← Mude para NextRequest
         concluida: body.concluida || false,
         categoria: body.categoria || "apuracao",
         ordem: novaOrdem,
+        // 🆕 ADICIONE OS NOVOS CAMPOS DE TEMPO
+        tempoEstimado: body.tempoEstimado || null,
+        tempoReal: body.tempoReal || null,
+        dataInicio: body.dataInicio ? new Date(body.dataInicio) : null,
+        dataConclusao: body.dataConclusao ? new Date(body.dataConclusao) : null,
+        emAndamento: body.emAndamento || false,
+        historicoTempo: body.historicoTempo || null,
       },
       select: {
         id: true,
@@ -108,6 +119,13 @@ export async function POST(request: NextRequest) { // ← Mude para NextRequest
         concluida: true,
         categoria: true,
         ordem: true,
+        // 🆕 INCLUA OS NOVOS CAMPOS NO SELECT
+        tempoEstimado: true,
+        tempoReal: true,
+        dataInicio: true,
+        dataConclusao: true,
+        emAndamento: true,
+        historicoTempo: true,
       },
     });
 

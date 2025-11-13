@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  Clock,
   ChevronLeft,
   ChevronRight,
   Filter,
@@ -10,9 +11,11 @@ import {
   X,
   GripVertical,
   Menu,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
 import {
   Dialog,
   DialogContent,
@@ -57,6 +60,21 @@ interface Atividade {
   concluida: boolean;
   categoria: "apuracao" | "reuniao" | "diagnostico" | "outros";
   ordem?: number;
+
+  // 🆕 NOVOS CAMPOS PARA CONTROLE DE TEMPO
+  tempoEstimado?: number; // em minutos
+  tempoReal?: number; // em minutos
+  dataInicio?: Date;
+  dataConclusao?: Date;
+  emAndamento?: boolean;
+  historicoTempo?: SessaoTrabalho[];
+}
+
+interface SessaoTrabalho {
+  inicio: Date;
+  fim?: Date;
+  duracao?: number; // em minutos
+  emAndamento?: boolean;
 }
 
 // Configuração das categorias
@@ -89,6 +107,34 @@ const CATEGORIAS = {
 
 type CategoriaType = keyof typeof CATEGORIAS;
 
+// Função para verificar se é dia útil
+const isDiaUtil = (date: Date): boolean => {
+  const day = date.getDay();
+  return day !== 0 && day !== 6; // Não é domingo (0) nem sábado (6)
+};
+
+// Função para encontrar o próximo dia útil
+const encontrarProximoDiaUtil = (date: Date): Date => {
+  const novaData = new Date(date);
+
+  while (!isDiaUtil(novaData)) {
+    novaData.setDate(novaData.getDate() + 1);
+  }
+
+  return novaData;
+};
+
+// Função para encontrar o dia útil anterior
+const encontrarDiaUtilAnterior = (date: Date): Date => {
+  const novaData = new Date(date);
+
+  while (!isDiaUtil(novaData)) {
+    novaData.setDate(novaData.getDate() - 1);
+  }
+
+  return novaData;
+};
+
 export default function CalendarioPage() {
   const session = useSession();
   const router = useRouter();
@@ -115,6 +161,7 @@ export default function CalendarioPage() {
     horario: "",
     responsavel: session.data?.user.name || "",
     categoria: "apuracao" as "apuracao" | "reuniao" | "diagnostico" | "outros",
+    tempoEstimado: undefined as number | undefined, // 🆕 Adicione esta linha
   });
 
   const [filtros, setFiltros] = useState<Record<CategoriaType, boolean>>({
@@ -125,9 +172,20 @@ export default function CalendarioPage() {
   });
 
   const [filtroConcluidas, setFiltroConcluidas] = useState<boolean>(true);
+  const [openTempoDialog, setOpenTempoDialog] = useState(false);
+  const [atividadeParaTempo, setAtividadeParaTempo] =
+    useState<Atividade | null>(null);
   const [openFiltroPopover, setOpenFiltroPopover] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
   const [mobileDayView, setMobileDayView] = useState<Date | null>(null);
+  const [isCopying, setIsCopying] = useState(false);
+  const [ultimoClique, setUltimoClique] = useState<{
+    id: string;
+    timestamp: number;
+  } | null>(null);
+  const [cliqueTimeout, setCliqueTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
 
   // Verificar tamanho da tela
   useEffect(() => {
@@ -144,7 +202,6 @@ export default function CalendarioPage() {
   // Cleanup effect para remover classes de drag
   useEffect(() => {
     if (!isReordering) {
-      // Remove todas as classes de estilo de drag quando não estiver reordenando
       document
         .querySelectorAll(
           ".opacity-50, .border-2, .border-emerald-400, .scale-105, .bg-emerald-100, .dark\\:bg-emerald-900\\/20"
@@ -218,27 +275,251 @@ export default function CalendarioPage() {
     });
   };
 
-  // Funções de drag and drop
-  const handleDragStart = (e: React.DragEvent, atividade: Atividade) => {
-    e.dataTransfer.setData("text/plain", atividade.id);
-    setDraggedAtividade(atividade);
-    // Aplica estilo visual mínimo apenas no elemento sendo arrastado
-    e.currentTarget.classList.add("opacity-70");
+  // FUNÇÃO MELHORADA: Copiar atividades para o próximo mês considerando dias úteis
+  const copiarParaProximoMes = async () => {
+    if (!session.data?.user?.id) {
+      toast.error("Usuário não autenticado");
+      return;
+    }
+
+    setIsCopying(true);
+    try {
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+      const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+      const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+
+      // Buscar atividades do mês atual (apenas dias úteis)
+      const atividadesDoMes = atividades.filter((atividade) => {
+        const atividadeDate = new Date(atividade.data);
+        return (
+          atividadeDate.getMonth() === currentMonth &&
+          atividadeDate.getFullYear() === currentYear &&
+          isDiaUtil(atividadeDate) // Só considera dias úteis
+        );
+      });
+
+      if (atividadesDoMes.length === 0) {
+        toast.info(
+          "Nenhuma atividade em dias úteis encontrada para copiar este mês"
+        );
+        return;
+      }
+
+      // Agrupar atividades por dia da semana útil (1=segunda, 2=terça, etc)
+      const atividadesPorDiaUtil = atividadesDoMes.reduce(
+        (acc, atividade) => {
+          const atividadeDate = new Date(atividade.data);
+          const diaDaSemana = atividadeDate.getDay(); // 0=domingo, 1=segunda, etc
+
+          // Converter para formato de dia útil (1=segunda, 2=terça, ..., 5=sexta)
+          const diaUtil = diaDaSemana === 0 ? 7 : diaDaSemana;
+
+          if (!acc[diaUtil]) {
+            acc[diaUtil] = [];
+          }
+          acc[diaUtil].push(atividade);
+          return acc;
+        },
+        {} as Record<number, Atividade[]>
+      );
+
+      // Preparar dados para cópia - mapear para os mesmos dias úteis do próximo mês
+      const atividadesParaCopiar: any[] = [];
+      const diasUteisProximoMes: Date[] = [];
+
+      // Encontrar todos os dias úteis do próximo mês
+      const primeiroDiaProximoMes = new Date(nextYear, nextMonth, 1);
+      const ultimoDiaProximoMes = new Date(nextYear, nextMonth + 1, 0);
+
+      let dataAtual = new Date(primeiroDiaProximoMes);
+      while (dataAtual <= ultimoDiaProximoMes) {
+        if (isDiaUtil(dataAtual)) {
+          diasUteisProximoMes.push(new Date(dataAtual));
+        }
+        dataAtual.setDate(dataAtual.getDate() + 1);
+      }
+
+      // Mapear atividades para os dias úteis correspondentes do próximo mês
+      Object.entries(atividadesPorDiaUtil).forEach(
+        ([diaUtilStr, atividadesDia]) => {
+          const diaUtil = parseInt(diaUtilStr);
+
+          // Encontrar todas as ocorrências deste dia útil no próximo mês
+          const diasCorrespondentes = diasUteisProximoMes.filter((data) => {
+            const diaDaSemana = data.getDay();
+            const diaUtilCorrespondente = diaDaSemana === 0 ? 7 : diaDaSemana;
+            return diaUtilCorrespondente === diaUtil;
+          });
+
+          // Distribuir as atividades pelos dias correspondentes
+          diasCorrespondentes.forEach((data, index) => {
+            const atividadesParaEsteDia =
+              index < atividadesDia.length
+                ? [atividadesDia[index]]
+                : atividadesDia.slice(0, 1); // Pelo menos uma atividade por dia
+
+            atividadesParaEsteDia.forEach((atividade) => {
+              atividadesParaCopiar.push({
+                nome: atividade.nome,
+                horario: atividade.horario,
+                responsavel: atividade.responsavel,
+                responsavelId: atividade.responsavelId,
+                responsavelImg: atividade.responsavelImg,
+                data: data.toISOString(),
+                concluida: false,
+                categoria: atividade.categoria,
+              });
+            });
+          });
+        }
+      );
+
+      if (atividadesParaCopiar.length === 0) {
+        toast.info(
+          "Nenhuma atividade pôde ser copiada para dias úteis do próximo mês"
+        );
+        return;
+      }
+
+      // Enviar para a API
+      const response = await fetch("/api/atividades/copiar-mes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          atividades: atividadesParaCopiar,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao copiar atividades");
+      }
+
+      const novasAtividades = await response.json();
+
+      // Atualizar a lista de atividades
+      setAtividades((prev) => [...prev, ...novasAtividades]);
+
+      toast.success(
+        `${atividadesParaCopiar.length} atividades copiadas para ${monthNames[nextMonth]} (apenas dias úteis)!`
+      );
+
+      // Navegar para o próximo mês
+      setCurrentDate(new Date(nextYear, nextMonth, 1));
+    } catch (error) {
+      console.error("Erro ao copiar atividades:", error);
+      toast.error("Erro ao copiar atividades para o próximo mês");
+    } finally {
+      setIsCopying(false);
+    }
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
-    // Remove todos os estilos de drag de TODOS os elementos
-    document.querySelectorAll(".day-cell").forEach((cell) => {
-      cell.classList.remove(
-        "bg-emerald-100",
-        "dark:bg-emerald-900/20",
-        "border-emerald-300",
-        "border-2"
-      );
-    });
+  const iniciarTimer = async (atividade: Atividade) => {
+    try {
+      console.log("🟢 INICIANDO TIMER para:", atividade.nome);
 
-    // Remove estilo do elemento arrastado
-    e.currentTarget.classList.remove("opacity-70");
+      const response = await fetch(`/api/atividades/${atividade.id}/tempo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "iniciar" }),
+      });
+
+      if (response.ok) {
+        const atividadeAtualizada = await response.json();
+        setAtividades((prev) =>
+          prev.map((a) =>
+            a.id === atividade.id ? { ...a, ...atividadeAtualizada } : a
+          )
+        );
+        toast.success(`⏱️ Timer iniciado para "${atividade.nome}"`, {
+          description: "Clique uma vez para parar",
+          duration: 2000,
+        });
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Erro ao iniciar timer");
+      }
+    } catch (error) {
+      console.error("💥 Erro completo:", error);
+      toast.error("Erro ao iniciar timer");
+    }
+  };
+
+  const pararTimer = async (atividade: Atividade) => {
+    try {
+      console.log("🔴 PARANDO TIMER para:", atividade.nome);
+
+      const response = await fetch(`/api/atividades/${atividade.id}/tempo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "parar" }),
+      });
+
+      if (response.ok) {
+        const atividadeAtualizada = await response.json();
+        setAtividades((prev) =>
+          prev.map((a) =>
+            a.id === atividade.id ? { ...a, ...atividadeAtualizada } : a
+          )
+        );
+
+        const tempoGasto =
+          atividadeAtualizada.tempoReal - (atividade.tempoReal || 0);
+        const formatarTempo = (minutos: number) => {
+          if (minutos === 0) return "0min";
+          if (minutos < 60) {
+            return `${minutos}min`;
+          } else {
+            const horas = Math.floor(minutos / 60);
+            const mins = minutos % 60;
+            return mins > 0 ? `${horas}h${mins}min` : `${horas}h`;
+          }
+        };
+
+        toast.success(`⏹️ Timer parado para "${atividade.nome}"`, {
+          description: `Tempo gasto: ${formatarTempo(tempoGasto)}`,
+          duration: 3000,
+        });
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Erro ao parar timer");
+      }
+    } catch (error) {
+      console.error("💥 Erro completo:", error);
+      toast.error("Erro ao parar timer");
+    }
+  };
+  // Adicione este useEffect para limpar o timeout
+  useEffect(() => {
+    return () => {
+      if (cliqueTimeout) {
+        clearTimeout(cliqueTimeout);
+      }
+    };
+  }, [cliqueTimeout]);
+
+  const definirEstimativa = async (atividade: Atividade, minutos: number) => {
+    try {
+      const response = await fetch(`/api/atividades/${atividade.id}/tempo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "estimativa", tempoEstimado: minutos }),
+      });
+
+      if (response.ok) {
+        const atividadeAtualizada = await response.json();
+        setAtividades((prev) =>
+          prev.map((a) =>
+            a.id === atividade.id ? { ...a, ...atividadeAtualizada } : a
+          )
+        );
+        toast.success(`Estimativa definida para ${minutos}min`);
+      }
+    } catch (error) {
+      toast.error("Erro ao definir estimativa");
+    }
   };
 
   const handleDragOver = (e: React.DragEvent, date: Date) => {
@@ -253,7 +534,16 @@ export default function CalendarioPage() {
       );
     });
   };
-
+  // Função para formato ultra compacto
+  const formatarTempoCompacta = (minutos: number) => {
+    if (minutos < 60) {
+      return `${minutos}m`;
+    } else {
+      const horas = Math.floor(minutos / 60);
+      const mins = minutos % 60;
+      return mins > 0 ? `${horas}h${mins}m` : `${horas}h`;
+    }
+  };
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     // Remove qualquer destaque ao sair da célula
@@ -323,17 +613,42 @@ export default function CalendarioPage() {
 
   const handleToggleConcluida = async (atividade: Atividade) => {
     try {
+      // Se estiver marcando como concluída e o timer estiver rodando, para primeiro
+      if (!atividade.concluida && atividade.emAndamento) {
+        await pararTimer(atividade);
+      }
+
       const res = await fetch(`/api/atividades/${atividade.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...atividade, concluida: !atividade.concluida }),
+        body: JSON.stringify({
+          ...atividade,
+          concluida: !atividade.concluida,
+          dataConclusao: !atividade.concluida ? new Date() : null,
+          emAndamento: false, // Garante que para o timer ao concluir
+        }),
       });
+
       const atividadeAtualizada = await res.json();
       setAtividades(
         atividades.map((a) => (a.id === atividade.id ? atividadeAtualizada : a))
       );
+
+      // 🆕 TOASTS MELHORADOS
+      if (atividadeAtualizada.concluida) {
+        toast.success(`✅ "${atividade.nome}" concluída!`, {
+          description: "Duplo clique para reabrir",
+          duration: 3000,
+        });
+      } else {
+        toast.info(`🔄 "${atividade.nome}" reaberta!`, {
+          description: "Pronta para trabalhar novamente",
+          duration: 3000,
+        });
+      }
     } catch (error) {
       console.error("Erro ao atualizar atividade:", error);
+      toast.error("Erro ao atualizar atividade");
     }
   };
 
@@ -376,6 +691,7 @@ export default function CalendarioPage() {
       horario: atividade.horario || "",
       responsavel: atividade.responsavel,
       categoria: atividade.categoria,
+      tempoEstimado: atividade.tempoEstimado || undefined, // 🆕 Adicione esta linha
     });
     setSelectedDate(new Date(atividade.data));
     setOpenDialog(true);
@@ -388,6 +704,7 @@ export default function CalendarioPage() {
       horario: "",
       responsavel: session.data?.user?.name || "Usuário Atual",
       categoria: "apuracao",
+      tempoEstimado: undefined, // 🆕 Adicione esta linha
     });
     setSelectedDate(date);
     setOpenDialog(true);
@@ -420,6 +737,43 @@ export default function CalendarioPage() {
     }
   };
 
+  const handleAddAtividade = async () => {
+    if (!selectedDate || !novaAtividade.nome) return;
+    try {
+      const createPromise = fetch("/api/atividades", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...novaAtividade,
+          responsavelId: session.data?.user.id,
+          responsavelImg: session.data?.user.image,
+          data: selectedDate.toISOString(),
+          tempoEstimado: novaAtividade.tempoEstimado, // 🆕 Inclua o tempo estimado
+        }),
+      }).then((res) => res.json());
+
+      toast.promise(createPromise, {
+        loading: `Criando "${novaAtividade.nome}"...`,
+        success: (atividadeCriada) => {
+          setAtividades([...atividades, atividadeCriada]);
+          setNovaAtividade({
+            nome: "",
+            horario: "",
+            responsavel: session.data?.user.name || "",
+            categoria: "apuracao",
+            tempoEstimado: undefined, // 🆕 Adicione esta linha
+          });
+          setOpenDialog(false);
+          return `"${novaAtividade.nome}" criada com sucesso!`;
+        },
+        error: () => `Erro ao criar "${novaAtividade.nome}"`,
+      });
+    } catch (error) {
+      toast.error("Ocorreu um erro ao criar a atividade");
+      console.error("Erro ao criar atividade:", error);
+    }
+  };
+
   const handleUpdateAtividade = async () => {
     if (!atividadeParaEditar || !novaAtividade.nome) return;
     try {
@@ -429,6 +783,7 @@ export default function CalendarioPage() {
         body: JSON.stringify({
           ...novaAtividade,
           data: selectedDate?.toISOString(),
+          tempoEstimado: novaAtividade.tempoEstimado, // 🆕 Inclua o tempo estimado
         }),
       }).then((res) => res.json());
 
@@ -446,6 +801,7 @@ export default function CalendarioPage() {
             horario: "",
             responsavel: session.data?.user.name || "",
             categoria: "apuracao",
+            tempoEstimado: undefined, // 🆕 Reset também aqui
           });
           setOpenDialog(false);
           return `"${novaAtividade.nome}" atualizada com sucesso!`;
@@ -455,41 +811,6 @@ export default function CalendarioPage() {
     } catch (error) {
       toast.error("Ocorreu um erro ao atualizar a atividade");
       console.error("Erro ao atualizar atividade:", error);
-    }
-  };
-
-  const handleAddAtividade = async () => {
-    if (!selectedDate || !novaAtividade.nome) return;
-    try {
-      const createPromise = fetch("/api/atividades", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...novaAtividade,
-          responsavelId: session.data?.user.id,
-          responsavelImg: session.data?.user.image,
-          data: selectedDate.toISOString(),
-        }),
-      }).then((res) => res.json());
-
-      toast.promise(createPromise, {
-        loading: `Criando "${novaAtividade.nome}"...`,
-        success: (atividadeCriada) => {
-          setAtividades([...atividades, atividadeCriada]);
-          setNovaAtividade({
-            nome: "",
-            horario: "",
-            responsavel: session.data?.user.name || "",
-            categoria: "apuracao",
-          });
-          setOpenDialog(false);
-          return `"${novaAtividade.nome}" criada com sucesso!`;
-        },
-        error: () => `Erro ao criar "${novaAtividade.nome}"`,
-      });
-    } catch (error) {
-      toast.error("Ocorreu um erro ao criar a atividade");
-      console.error("Erro ao criar atividade:", error);
     }
   };
 
@@ -609,7 +930,57 @@ export default function CalendarioPage() {
       console.error("Erro ao reordenar:", error);
     }
   };
+  // 🆕 ADICIONE ESTA FUNÇÃO NO COMPONENTE PRINCIPAL (fora do renderAtividadesDoDia)
+  const handleCliqueAtividade = (e: React.MouseEvent, atividade: Atividade) => {
+    e.stopPropagation();
 
+    const agora = Date.now();
+    const ehDuploClique =
+      ultimoClique &&
+      ultimoClique.id === atividade.id &&
+      agora - ultimoClique.timestamp < 300; // 300ms para duplo clique
+
+    if (cliqueTimeout) {
+      clearTimeout(cliqueTimeout);
+      setCliqueTimeout(null);
+    }
+
+    if (ehDuploClique) {
+      // 🟢 DUPLO CLIQUE - Concluir/Desconcluir
+      setUltimoClique(null);
+      handleToggleConcluida(atividade);
+    } else {
+      // 🔵 CLIQUE ÚNICO - Controlar timer
+      setUltimoClique({ id: atividade.id, timestamp: agora });
+
+      // Se não for duplo clique, espera um pouco antes de executar o clique único
+      const timeout = setTimeout(() => {
+        if (atividade.emAndamento) {
+          // Se timer está ativo, para o timer
+          pararTimer(atividade);
+        } else {
+          // Se timer não está ativo, inicia o timer (só se não estiver concluída)
+          if (!atividade.concluida) {
+            iniciarTimer(atividade);
+          }
+        }
+        setUltimoClique(null);
+      }, 200);
+
+      setCliqueTimeout(timeout);
+    }
+  };
+  // 🆕 ADICIONE ESTA FUNÇÃO NO COMPONENTE PRINCIPAL
+  const formatarTempo = (minutos: number) => {
+    if (minutos === 0) return "0min";
+    if (minutos < 60) {
+      return `${minutos}min`;
+    } else {
+      const horas = Math.floor(minutos / 60);
+      const mins = minutos % 60;
+      return mins > 0 ? `${horas}h${mins}min` : `${horas}h`;
+    }
+  };
   const renderAtividadesDoDia = (
     atividadesDoDia: Atividade[],
     currentDay: Date
@@ -628,10 +999,10 @@ export default function CalendarioPage() {
         <div
           key={atividade.id}
           className={`text-xs p-1.5 rounded cursor-pointer relative group border ${estilo}
-  hover:shadow-md transition-all
-  ${dragOverAtividade === atividade.id ? "border-2 border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20" : ""}
-  ${draggedAtividade?.id === atividade.id ? "" : ""}`}
-          onClick={() => handleToggleConcluida(atividade)}
+          hover:shadow-md transition-all
+          ${dragOverAtividade === atividade.id ? "border-2 border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20" : ""}
+          ${draggedAtividade?.id === atividade.id ? "" : ""}`}
+          onClick={(e) => handleCliqueAtividade(e, atividade)} // 🆕 Agora passamos a atividade como parâmetro
           draggable
           onDragStart={(e) => handleVerticalDragStart(e, atividade)}
           onDragEnd={handleVerticalDragEnd}
@@ -640,7 +1011,7 @@ export default function CalendarioPage() {
           onDrop={(e) => handleVerticalDrop(e, atividade.id, currentDay)}
         >
           <div className="absolute left-1 top-1/2 transform -translate-y-1/2 cursor-grab active:cursor-grabbing">
-            <GripVertical className="h-3 w-3 text-gray-400 " />
+            <GripVertical className="h-3 w-3 text-gray-400" />
           </div>
 
           <div className="flex justify-between items-start gap-2 ml-4">
@@ -670,15 +1041,39 @@ export default function CalendarioPage() {
                 <span className="text-xs break-words line-clamp-2 leading-tight">
                   {atividade.nome}
                 </span>
+
+                {/* 🆕 INDICADOR MINIMALISTA DE STATUS */}
+                <div className="flex items-center gap-1.5 mt-1">
+                  {atividade.emAndamento && (
+                    <span className="text-[9px] text-red-600 font-medium bg-red-50 px-1 py-0.5 rounded-full">
+                      ● Andamento
+                    </span>
+                  )}
+                  
+                </div>
+
                 <span className="text-[10px] mt-0.5 opacity-80">
                   {CATEGORIAS[atividade.categoria].label}
                 </span>
               </div>
             </div>
 
-            <div className="flex flex-shrink-0">
+            <div className="flex flex-shrink-0 gap-1">
+              {/* 🆕 ÍCONE DE TIMER */}
               <button
-                className="text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded-full p-0.5 ml-1"
+                className="text-blue-500 opacity-0 group-hover:opacity-100 hover:bg-blue-100 rounded-full p-0.5 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAtividadeParaTempo(atividade);
+                  setOpenTempoDialog(true);
+                }}
+                title="Ver detalhes de tempo"
+              >
+                <Clock className="h-3 w-3" />
+              </button>
+
+              <button
+                className="text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded-full p-0.5 transition-opacity"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleEditAtividade(atividade);
@@ -688,7 +1083,7 @@ export default function CalendarioPage() {
                 <Pencil className="h-3 w-3" />
               </button>
               <button
-                className="text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded-full p-0.5 ml-1"
+                className="text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded-full p-0.5 transition-opacity"
                 onClick={(e) => {
                   e.stopPropagation();
                   confirmDelete(atividade.id);
@@ -734,6 +1129,16 @@ export default function CalendarioPage() {
       const isToday = currentDay.toDateString() === new Date().toDateString();
       const atividadesDoDia = getAtividadesDoDia(currentDay);
 
+      // CÁLCULO DO PERCENTUAL DE CONCLUSÃO
+      const totalAtividades = atividadesDoDia.length;
+      const atividadesConcluidas = atividadesDoDia.filter(
+        (a) => a.concluida
+      ).length;
+      const percentualConclusao =
+        totalAtividades > 0
+          ? Math.round((atividadesConcluidas / totalAtividades) * 100)
+          : 0;
+
       days.push(
         <div
           key={`day-${i}`}
@@ -747,15 +1152,57 @@ export default function CalendarioPage() {
           onClick={() => isMobileView && setMobileDayView(currentDay)}
         >
           <div className="flex justify-between items-start mb-1">
-            <span
-              className={`text-xs sm:text-sm font-medium ${
-                isToday
-                  ? "bg-gradient-to-br from-emerald-500 via-emerald-600 to-green-500 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center shadow-[0_0_6px_0_rgba(192,132,252,0.7)]"
-                  : "dark:text-emerald-100 text-gray-800"
-              }`}
-            >
-              {i}
-            </span>
+            <div className="flex items-center gap-1">
+              <span
+                className={`text-xs sm:text-sm font-medium ${
+                  isToday
+                    ? "bg-gradient-to-br from-emerald-500 via-emerald-600 to-green-500 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center shadow-[0_0_6px_0_rgba(192,132,252,0.7)]"
+                    : "dark:text-emerald-100 text-gray-800"
+                }`}
+              >
+                {i}
+              </span>
+
+              {/* INDICADOR MELHORADO: Quantidade + Percentual */}
+              {/* INDICADOR MELHORADO: Quantidade + Percentual */}
+              {totalAtividades > 0 && (
+                <div className="flex flex-col gap-0.5 ml-1 min-w-[40px]">
+                  <div className="flex items-center gap-0.5 justify-between">
+                    <div
+                      className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        percentualConclusao === 100
+                          ? "bg-green-500"
+                          : percentualConclusao >= 50
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                      }`}
+                      title={`${percentualConclusao}% concluído (${atividadesConcluidas}/${totalAtividades})`}
+                    />
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                      {atividadesConcluidas}/{totalAtividades}
+                    </span>
+                  </div>
+
+                  {/* BARRA DE PROGRESSO MAIOR */}
+                  {totalAtividades > 0 && (
+                    <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          percentualConclusao === 100
+                            ? "bg-green-500"
+                            : percentualConclusao >= 50
+                              ? "bg-yellow-500"
+                              : "bg-red-400"
+                        }`}
+                        style={{ width: `${percentualConclusao}%` }}
+                        title={`${percentualConclusao}% concluído`}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {!isMobileView && (
               <button
                 onClick={() => handleOpenDialog(currentDay)}
@@ -765,11 +1212,13 @@ export default function CalendarioPage() {
               </button>
             )}
           </div>
+
           {!isMobileView && (
             <div className="mt-1 flex-1 space-y-1 overflow-y-auto">
               {renderAtividadesDoDia(atividadesDoDia, currentDay)}
             </div>
           )}
+
           {isMobileView && atividadesDoDia.length > 0 && (
             <div className="mt-1 flex justify-center">
               <div className="flex flex-wrap gap-0.5">
@@ -778,7 +1227,9 @@ export default function CalendarioPage() {
                   return (
                     <div
                       key={atividade.id}
-                      className={`w-2 h-2 rounded-full ${categoriaConfig.corEscura}`}
+                      className={`w-2 h-2 rounded-full ${categoriaConfig.corEscura} ${
+                        atividade.concluida ? "opacity-50" : ""
+                      }`}
                       title={atividade.nome}
                     ></div>
                   );
@@ -1053,6 +1504,20 @@ export default function CalendarioPage() {
                 </div>
               </PopoverContent>
             </Popover>
+
+            {/* NOVO BOTÃO: Copiar para o próximo mês */}
+            <Button
+              variant="outline"
+              size={isMobileView ? "sm" : "default"}
+              onClick={copiarParaProximoMes}
+              disabled={isCopying}
+              className="dark:border-emerald-900/30 dark:hover:bg-emerald-900/20"
+            >
+              <Copy className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+              <span className="hidden md:inline">
+                {isCopying ? "Copiando..." : "Copiar Mês"}
+              </span>
+            </Button>
           </div>
 
           <div className="flex items-center space-x-1 md:space-x-2">
@@ -1254,6 +1719,29 @@ export default function CalendarioPage() {
                 className="col-span-3 dark:bg-emerald-950/30 dark:border-emerald-900/30"
               />
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label
+                htmlFor="tempoEstimado"
+                className="text-right dark:text-emerald-200 text-sm"
+              >
+                Tempo Estimado (min):
+              </label>
+              <Input
+                id="tempoEstimado"
+                type="number"
+                value={novaAtividade.tempoEstimado || ""}
+                onChange={(e) =>
+                  setNovaAtividade({
+                    ...novaAtividade,
+                    tempoEstimado: e.target.value
+                      ? parseInt(e.target.value)
+                      : undefined,
+                  })
+                }
+                className="col-span-3 dark:bg-emerald-950/20 dark:border-emerald-900/30"
+                placeholder="Tempo em minutos"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-2">
@@ -1304,6 +1792,188 @@ export default function CalendarioPage() {
               Confirmar
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Dialog de Detalhes de Tempo */}
+      <Dialog open={openTempoDialog} onOpenChange={setOpenTempoDialog}>
+        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-emerald-900/30 bg-white mx-2 md:mx-0">
+          <DialogHeader>
+            <DialogTitle className="dark:text-emerald-100 flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-500" />
+              Controle de Tempo
+            </DialogTitle>
+          </DialogHeader>
+
+          {atividadeParaTempo && (
+            <div className="space-y-6 py-4">
+              {/* CABEÇALHO */}
+              <div className="text-center">
+                <h3 className="font-semibold text-lg dark:text-white">
+                  {atividadeParaTempo.nome}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {CATEGORIAS[atividadeParaTempo.categoria].label}
+                </p>
+              </div>
+
+              {/* ESTATÍSTICAS PRINCIPAIS */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {formatarTempo(atividadeParaTempo.tempoReal || 0)}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    Tempo Gasto
+                  </div>
+                </div>
+
+                <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="text-2xl font-bold text-gray-600 dark:text-gray-300">
+                    {formatarTempo(atividadeParaTempo.tempoEstimado || 0)}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    Tempo Estimado
+                  </div>
+                </div>
+              </div>
+
+              {/* BARRA DE PROGRESSO */}
+              {atividadeParaTempo.tempoEstimado &&
+                atividadeParaTempo.tempoEstimado > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Progresso
+                      </span>
+                      <span className="font-medium">
+                        {Math.round(
+                          ((atividadeParaTempo.tempoReal || 0) /
+                            atividadeParaTempo.tempoEstimado) *
+                            100
+                        )}
+                        %
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
+                      <div
+                        className={`h-3 rounded-full transition-all duration-500 ${
+                          (atividadeParaTempo.tempoReal || 0) <=
+                          atividadeParaTempo.tempoEstimado
+                            ? "bg-green-500"
+                            : "bg-orange-500"
+                        }`}
+                        style={{
+                          width: `${Math.min(100, ((atividadeParaTempo.tempoReal || 0) / atividadeParaTempo.tempoEstimado) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+              {/* STATUS */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm dark:text-white">Status</h4>
+                <div className="flex flex-wrap gap-2">
+                  {atividadeParaTempo.emAndamento && (
+                    <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                      Timer Ativo
+                    </span>
+                  )}
+                  {atividadeParaTempo.concluida && (
+                    <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs">
+                      ✓ Concluída
+                    </span>
+                  )}
+                  {atividadeParaTempo.dataInicio && (
+                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs">
+                      🗓️ Iniciada
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* HISTÓRICO DE SESSÕES */}
+              {atividadeParaTempo.historicoTempo &&
+                Array.isArray(atividadeParaTempo.historicoTempo) &&
+                atividadeParaTempo.historicoTempo.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm dark:text-white">
+                      Sessões de Trabalho
+                    </h4>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {atividadeParaTempo.historicoTempo.map(
+                        (sessao: any, index: number) => (
+                          <div
+                            key={index}
+                            className="flex justify-between items-center text-xs p-2 bg-gray-50 dark:bg-gray-800 rounded"
+                          >
+                            <span>
+                              {new Date(sessao.inicio).toLocaleTimeString(
+                                "pt-BR",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )}
+                              {sessao.fim &&
+                                ` - ${new Date(sessao.fim).toLocaleTimeString(
+                                  "pt-BR",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )}`}
+                            </span>
+                            <span className="font-medium text-blue-600">
+                              {sessao.duracao
+                                ? `${sessao.duracao}min`
+                                : "Em andamento"}
+                            </span>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {/* AÇÕES RÁPIDAS */}
+              <div className="flex gap-2 pt-4">
+                {!atividadeParaTempo.concluida && (
+                  <>
+                    {!atividadeParaTempo.emAndamento ? (
+                      <Button
+                        onClick={() => {
+                          iniciarTimer(atividadeParaTempo);
+                          setOpenTempoDialog(false);
+                        }}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        ▶ Iniciar Timer
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => {
+                          pararTimer(atividadeParaTempo);
+                          setOpenTempoDialog(false);
+                        }}
+                        className="flex-1 bg-red-600 hover:bg-red-700"
+                      >
+                        ⏹️ Parar Timer
+                      </Button>
+                    )}
+                  </>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setOpenTempoDialog(false)}
+                  className="flex-1"
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
