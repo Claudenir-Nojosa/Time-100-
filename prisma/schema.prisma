@@ -62,6 +62,8 @@ model User {
   ContribuicaoMeta ContribuicaoMeta[]
 
   obrigacaos Obrigacao[]
+
+  analiseTributarias AnaliseTributaria[]
 }
 
 model Account {
@@ -132,6 +134,7 @@ model Empresa {
 
   @@map("empresas")
   entregas Entrega[]
+  analiseTributarias AnaliseTributaria[]
 }
 
 enum SituacaoEmpresa {
@@ -191,7 +194,23 @@ model Entrega {
   @@unique([empresaId, obrigacaoId, mesReferencia])
   @@map("entregas")
 }
+// Adicione este modelo ao seu schema.prisma se não existir
+model AnaliseTributaria {
+  id            String   @id @default(cuid())
+  empresaId     String
+  userId        String
+  mesReferencia String
+  dadosApuracao Json
+  analiseTexto  String   @db.Text
+  indicadores   Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
+  empresa Empresa @relation(fields: [empresaId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([empresaId, mesReferencia])
+}
 model Atividade {
   id             String   @id @default(cuid())
   nome           String
