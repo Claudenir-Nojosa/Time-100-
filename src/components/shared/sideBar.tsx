@@ -169,18 +169,10 @@ export default function Sidebar() {
               <ul className="ml-8 mt-1 space-y-1">
                 <li>
                   <Link
-                    href="/dashboard/empresas/adicionar"
+                    href="/dashboard/entregas"
                     className="flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-sm text-emerald-300/70 hover:text-emerald-200"
                   >
-                    <span className="ml-2">Adicionar Empresa</span>
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/dashboard/empresas/claudenir"
-                    className="flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-sm text-emerald-300/70 hover:text-emerald-200"
-                  >
-                    <span className="ml-2">Claudenir</span>
+                    <span className="ml-2">Entregas</span>
                   </Link>
                 </li>
               </ul>
@@ -253,7 +245,7 @@ export default function Sidebar() {
               {!isCollapsed && <span className="ml-2">Verificador de NCM</span>}
             </Link>
           </li>
-                    <li>
+          <li>
             <Link
               href="/dashboard/decreto"
               className={`flex items-center p-2 rounded-lg hover:bg-emerald-900/20 text-emerald-100 hover:text-emerald-100 ${

@@ -33,7 +33,6 @@ model User {
   anotacoes           Anotacao[]
   diagnosticos        Diagnostico[]
   baseLegalFavoritos  BaseLegalFavorito[]
-  analisesTributarias AnaliseTributaria[]
   mapeamentosTelefone MapeamentoTelefone[]
   pontos              Pontos[]
 
@@ -61,6 +60,8 @@ model User {
   ColaboradorMeta ColaboradorMeta[]
 
   ContribuicaoMeta ContribuicaoMeta[]
+
+  obrigacaos Obrigacao[]
 }
 
 model Account {
@@ -100,48 +101,95 @@ model VerificationToken {
 
 // SEUS MODELOS EXISTENTES (ATUALIZADOS)
 model Empresa {
-  id                String           @id @default(cuid())
-  razaoSocial       String
-  cnpj              String           @unique
-  inscricaoEstadual String?
-  email             String?
-  cidade            String?
+  id                String         @id @default(cuid())
+  codigo            String         @unique
+  descricao         String
+  cnpj              String         @unique
   uf                String
-  regimeTributacao  RegimeTributacao
-  responsavel       String
-  observacoes       String?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  grupo             String
+  periodoCadastro   DateTime
+  situacao          SituacaoEmpresa
+  tributacao        Tributacao
+  ie                String?
+  im                String?
+  certificadoDigital Boolean       @default(false)
+  email             String?
+  
+  // 🆕 CAMPOS DE COMPLEXIDADE
+  nivelEstudoTecnico      Int?     @db.SmallInt
+  demandaDuvidas          Int?     @db.SmallInt
+  tempoOperacional        Int?     @db.SmallInt
+  organizacaoCliente      Int?     @db.SmallInt
+  volumeDocumentos        Int?     @db.SmallInt
+  diversidadeOperacoes    Int?     @db.SmallInt
+  percentualComplexidade  Float?
+  
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   userId            String
-  status            StatusEmpresa?
+  user              User           @relation(fields: [userId], references: [id])
+  repasse           RepasseEmpresa?
 
-  user User @relation(fields: [userId], references: [id])
-
-  AnaliseTributaria AnaliseTributaria[]
+  @@map("empresas")
+  entregas Entrega[]
 }
 
-model StatusEmpresa {
-  id                             String   @id @default(cuid())
-  empresaId                      String   @unique
-  integracao                     Boolean  @default(false)
-  analiseNCM                     Boolean  @default(false)
-  estudoTributacaoGeral          Boolean  @default(false)
-  levantamentoPendencias         Boolean  @default(false)
-  analiseServicos                Boolean  @default(false)
-  complianceObrigacoesAcessorias Boolean  @default(false)
-  diagnostico                    Boolean  @default(false)
-  repasse                        Boolean  @default(false)
-  competencia                    String
-  createdAt                      DateTime @default(now())
-  updatedAt                      DateTime @updatedAt
-
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+enum SituacaoEmpresa {
+  ATIVA
+  NAO_VIGENTE
 }
 
-enum RegimeTributacao {
+enum Tributacao {
   SIMPLES_NACIONAL
   LUCRO_PRESUMIDO
   LUCRO_REAL
+}
+
+model RepasseEmpresa {
+  id          String   @id @default(cuid())
+  empresaId   String   @unique
+  colaborador String
+  dataRepasse DateTime
+  observacoes String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("repasse_empresas")
+}
+
+model Obrigacao {
+  id          String   @id @default(cuid())
+  nome        String
+  descricao   String?
+  categoria   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  entregas    Entrega[]
+
+  @@unique([nome, userId])
+  @@map("obrigacoes")
+}
+
+model Entrega {
+  id           String   @id @default(cuid())
+  empresaId    String
+  obrigacaoId  String
+  mesReferencia String  // Formato: "YYYY-MM"
+  entregue     Boolean  @default(false)
+  dataEntrega  DateTime?
+  observacoes  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  obrigacao Obrigacao @relation(fields: [obrigacaoId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, obrigacaoId, mesReferencia])
+  @@map("entregas")
 }
 
 model Atividade {
@@ -246,23 +294,6 @@ model Diagnostico {
   formData    Json
   user        User     @relation(fields: [userId], references: [id])
   userId      String
-}
-
-model AnaliseTributaria {
-  id            String   @id @default(cuid())
-  empresaId     String
-  userId        String
-  mesReferencia String
-  dadosApuracao Json
-  analiseTexto  String   @db.Text
-  indicadores   Json
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  empresa Empresa @relation(fields: [empresaId], references: [id])
-  user    User    @relation(fields: [userId], references: [id])
-
-  @@unique([empresaId, mesReferencia])
 }
 
 model MapeamentoTelefone {
