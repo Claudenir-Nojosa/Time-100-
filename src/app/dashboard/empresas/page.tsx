@@ -305,19 +305,34 @@ export default function EmpresasPage() {
     }
   };
 
-  const fetchEmpresas = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/empresas");
-      const data = await res.json();
-      setEmpresas(data);
-    } catch (error) {
-      console.error("Erro ao buscar empresas:", error);
-      toast.error("Erro ao carregar empresas");
-    } finally {
-      setLoading(false);
+const fetchEmpresas = async () => {
+  try {
+    setLoading(true);
+    console.log("🔄 Buscando empresas...");
+    
+    const res = await fetch("/api/empresas");
+    
+    if (!res.ok) {
+      console.warn(`⚠️ API retornou status ${res.status}, usando array vazio`);
+      setEmpresas([]);
+      return;
     }
-  };
+    
+    const data = await res.json();
+    console.log("📊 Dados recebidos da API:", data);
+    
+    // GARANTIR que sempre seja um array
+    const empresasArray = Array.isArray(data) ? data : [];
+    setEmpresas(empresasArray);
+    
+  } catch (error) {
+    console.error("❌ Erro ao buscar empresas:", error);
+    toast.error("Erro ao carregar empresas");
+    setEmpresas([]); // Sempre define como array vazio em caso de erro
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Filtrar empresas
   const empresasFiltradas = empresas.filter((empresa) => {

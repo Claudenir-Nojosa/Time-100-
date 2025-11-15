@@ -18,7 +18,7 @@ export type ObrigacaoAcessoria = {
 };
 
 export async function getObrigacoesAcessorias(): Promise<ObrigacaoAcessoria[]> {
-  const response = await fetch('/api/obrigacoes-acessorias');
+  const response = await fetch('/api/obrigacoes');
   if (!response.ok) {
     throw new Error('Falha ao carregar obrigações');
   }

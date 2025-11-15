@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 import { auth } from "../../../../auth";
 
+
 export async function GET() {
   try {
+    console.log("🔍 Buscando obrigações...");
+
     const session = await auth();
+    console.log("📋 Sessão obrigações:", session);
 
     if (!session?.user?.id) {
+      console.log("❌ Usuário não autenticado para obrigações");
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
@@ -17,10 +22,15 @@ export async function GET() {
       orderBy: { nome: "asc" },
     });
 
+    console.log(`✅ Obrigações encontradas: ${obrigacoes.length}`);
     return NextResponse.json(obrigacoes);
   } catch (error) {
+    console.error("❌ Erro ao buscar obrigações:", error);
     return NextResponse.json(
-      { error: "Erro ao buscar obrigações" },
+      {
+        error: "Erro ao buscar obrigações",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      },
       { status: 500 }
     );
   }
