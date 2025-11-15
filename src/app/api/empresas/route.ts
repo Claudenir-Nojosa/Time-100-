@@ -2,15 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 import { auth } from "../../../../auth";
 
-// GET todas as empresas
+// GET todas as empresas - VERSÃO CORRIGIDA
 export async function GET() {
   try {
+    console.log("🔍 Iniciando busca de empresas...");
+
     const session = await auth();
+    console.log("📋 Sessão:", session);
 
     if (!session?.user?.id) {
+      console.log("❌ Usuário não autenticado");
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
+    console.log("👤 User ID:", session.user.id);
+
+    // Buscar empresas com tratamento de erro mais específico
     const empresas = await db.empresa.findMany({
       where: {
         userId: session.user.id,
@@ -18,21 +25,34 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(empresas);
+    console.log(`✅ Empresas encontradas: ${empresas.length}`);
+
+    // Garantir que sempre retornamos um array
+    return NextResponse.json(empresas || []);
   } catch (error) {
+    console.error("❌ Erro detalhado ao buscar empresas:", error);
+
+    // Log mais detalhado do erro
+    if (error instanceof Error) {
+      console.error("📝 Mensagem de erro:", error.message);
+      console.error("🧩 Stack trace:", error.stack);
+    }
+
     return NextResponse.json(
       {
-        error: "Erro ao buscar empresas",
-        details: error instanceof Error ? error.message : String(error),
+        error: "Erro interno ao buscar empresas",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
       },
       { status: 500 }
     );
   }
 }
 
-// POST nova empresa
+// POST nova empresa - VERSÃO CORRIGIDA
 export async function POST(request: NextRequest) {
   try {
+    console.log("📦 Iniciando criação de empresa...");
+
     const session = await auth();
 
     if (!session?.user?.id) {
@@ -40,22 +60,23 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("📄 Dados recebidos:", body);
 
     // Validação dos campos obrigatórios
-    if (
-      !body.codigo ||
-      !body.descricao ||
-      !body.cnpj ||
-      !body.uf ||
-      !body.grupo
-    ) {
+    const camposObrigatorios = ["codigo", "descricao", "cnpj", "uf", "grupo"];
+    const camposFaltantes = camposObrigatorios.filter((campo) => !body[campo]);
+
+    if (camposFaltantes.length > 0) {
       return NextResponse.json(
-        { error: "Todos os campos obrigatórios devem ser preenchidos" },
+        {
+          error: "Campos obrigatórios faltando",
+          campos: camposFaltantes,
+        },
         { status: 400 }
       );
     }
 
-    // Verificar se código já existe para este usuário
+    // Verificar se código já existe
     const codigoExistente = await db.empresa.findFirst({
       where: {
         codigo: body.codigo,
@@ -70,7 +91,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar se CNPJ já existe para este usuário
+    // Verificar se CNPJ já existe
     const cnpjExistente = await db.empresa.findFirst({
       where: {
         cnpj: body.cnpj,
@@ -85,6 +106,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Criar empresa
     const empresa = await db.empresa.create({
       data: {
         codigo: body.codigo,
@@ -97,19 +119,26 @@ export async function POST(request: NextRequest) {
         tributacao: body.tributacao,
         ie: body.ie || null,
         im: body.im || null,
-        certificadoDigital: body.certificadoDigital,
+        certificadoDigital: Boolean(body.certificadoDigital),
         email: body.email || null,
-        userId: session.user.id, // Usar o ID do usuário logado
+        userId: session.user.id,
       },
     });
 
+    console.log("✅ Empresa criada com sucesso:", empresa.id);
     return NextResponse.json(empresa, { status: 201 });
   } catch (error) {
-    console.error("Erro ao criar empresa:", error);
+    console.error("❌ Erro detalhado ao criar empresa:", error);
+
+    if (error instanceof Error) {
+      console.error("📝 Mensagem de erro:", error.message);
+      console.error("🧩 Stack trace:", error.stack);
+    }
+
     return NextResponse.json(
       {
-        error: "Erro ao criar empresa",
-        details: error instanceof Error ? error.message : String(error),
+        error: "Erro interno ao criar empresa",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
       },
       { status: 500 }
     );
