@@ -16,6 +16,7 @@ model User {
   emailVerified        DateTime?
   password             String?
   image                String?
+  telefone             String?   @unique
   subscriptionStatus   String    @default("free")
   stripeSubscriptionId String?
   stripeCustomerId     String?
@@ -33,6 +34,7 @@ model User {
   anotacoes           Anotacao[]
   diagnosticos        Diagnostico[]
   baseLegalFavoritos  BaseLegalFavorito[]
+  analisesTributarias AnaliseTributaria[]
   mapeamentosTelefone MapeamentoTelefone[]
   pontos              Pontos[]
 
@@ -62,8 +64,6 @@ model User {
   ContribuicaoMeta ContribuicaoMeta[]
 
   obrigacaos Obrigacao[]
-
-  analiseTributarias AnaliseTributaria[]
 }
 
 model Account {

@@ -226,11 +226,23 @@ export default function CalendarioPage() {
   }, [session.status, router]);
 
   useEffect(() => {
-    const fetchAtividades = async () => {
-      try {
-        setIsLoading(true);
-        const res = await fetch("/api/atividades");
-        const data = await res.json();
+  const fetchAtividades = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch("/api/atividades");
+      
+      // Verifica se a resposta foi bem sucedida
+      if (!res.ok) {
+        throw new Error(`Erro HTTP: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      
+      // DEBUG: Log para verificar o que está vindo da API
+      console.log("Dados recebidos da API:", data);
+      
+      // Verifica se data é um array antes de usar map
+      if (Array.isArray(data)) {
         setAtividades(
           data.map((a: any) => ({
             ...a,
@@ -238,17 +250,37 @@ export default function CalendarioPage() {
             categoria: a.categoria || "apuracao",
           }))
         );
-      } catch (error) {
-        console.error("Erro ao buscar atividades:", error);
-      } finally {
-        setIsLoading(false);
+      } else {
+        console.error("Dados não são um array:", data);
+        // Se não for array, tenta extrair atividades de uma propriedade
+        if (data.atividades && Array.isArray(data.atividades)) {
+          setAtividades(
+            data.atividades.map((a: any) => ({
+              ...a,
+              data: new Date(a.data),
+              categoria: a.categoria || "apuracao",
+            }))
+          );
+        } else {
+          // Se não conseguir encontrar array, define como vazio
+          setAtividades([]);
+          toast.error("Formato de dados inválido da API");
+        }
       }
-    };
-
-    if (session.status === "authenticated") {
-      fetchAtividades();
+    } catch (error) {
+      console.error("Erro ao buscar atividades:", error);
+      toast.error("Erro ao carregar atividades");
+      setAtividades([]); // Garante que atividades seja um array vazio em caso de erro
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  if (session.status === "authenticated") {
+    fetchAtividades();
+  }
   }, [session.status]);
+  
 
   if (session.status === "loading") {
     return <div>Carregando...</div>;
