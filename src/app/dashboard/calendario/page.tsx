@@ -138,6 +138,8 @@ const encontrarDiaUtilAnterior = (date: Date): Date => {
 export default function CalendarioPage() {
   const session = useSession();
   const router = useRouter();
+  const [isDeletingMonth, setIsDeletingMonth] = useState(false);
+  const [openDeleteMonthDialog, setOpenDeleteMonthDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [atividades, setAtividades] = useState<Atividade[]>([]);
@@ -226,61 +228,60 @@ export default function CalendarioPage() {
   }, [session.status, router]);
 
   useEffect(() => {
-  const fetchAtividades = async () => {
-    try {
-      setIsLoading(true);
-      const res = await fetch("/api/atividades");
-      
-      // Verifica se a resposta foi bem sucedida
-      if (!res.ok) {
-        throw new Error(`Erro HTTP: ${res.status}`);
-      }
-      
-      const data = await res.json();
-      
-      // DEBUG: Log para verificar o que está vindo da API
-      console.log("Dados recebidos da API:", data);
-      
-      // Verifica se data é um array antes de usar map
-      if (Array.isArray(data)) {
-        setAtividades(
-          data.map((a: any) => ({
-            ...a,
-            data: new Date(a.data),
-            categoria: a.categoria || "apuracao",
-          }))
-        );
-      } else {
-        console.error("Dados não são um array:", data);
-        // Se não for array, tenta extrair atividades de uma propriedade
-        if (data.atividades && Array.isArray(data.atividades)) {
+    const fetchAtividades = async () => {
+      try {
+        setIsLoading(true);
+        const res = await fetch("/api/atividades");
+
+        // Verifica se a resposta foi bem sucedida
+        if (!res.ok) {
+          throw new Error(`Erro HTTP: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        // DEBUG: Log para verificar o que está vindo da API
+        console.log("Dados recebidos da API:", data);
+
+        // Verifica se data é um array antes de usar map
+        if (Array.isArray(data)) {
           setAtividades(
-            data.atividades.map((a: any) => ({
+            data.map((a: any) => ({
               ...a,
               data: new Date(a.data),
               categoria: a.categoria || "apuracao",
             }))
           );
         } else {
-          // Se não conseguir encontrar array, define como vazio
-          setAtividades([]);
-          toast.error("Formato de dados inválido da API");
+          console.error("Dados não são um array:", data);
+          // Se não for array, tenta extrair atividades de uma propriedade
+          if (data.atividades && Array.isArray(data.atividades)) {
+            setAtividades(
+              data.atividades.map((a: any) => ({
+                ...a,
+                data: new Date(a.data),
+                categoria: a.categoria || "apuracao",
+              }))
+            );
+          } else {
+            // Se não conseguir encontrar array, define como vazio
+            setAtividades([]);
+            toast.error("Formato de dados inválido da API");
+          }
         }
+      } catch (error) {
+        console.error("Erro ao buscar atividades:", error);
+        toast.error("Erro ao carregar atividades");
+        setAtividades([]); // Garante que atividades seja um array vazio em caso de erro
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Erro ao buscar atividades:", error);
-      toast.error("Erro ao carregar atividades");
-      setAtividades([]); // Garante que atividades seja um array vazio em caso de erro
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  if (session.status === "authenticated") {
-    fetchAtividades();
-  }
+    if (session.status === "authenticated") {
+      fetchAtividades();
+    }
   }, [session.status]);
-  
 
   if (session.status === "loading") {
     return <div>Carregando...</div>;
@@ -289,6 +290,71 @@ export default function CalendarioPage() {
   if (!session.data) {
     return null;
   }
+
+  // Adicione esta função para deletar todas as atividades do mês
+  const deletarAtividadesDoMes = async () => {
+    if (!session.data?.user?.id) {
+      toast.error("Usuário não autenticado");
+      return;
+    }
+
+    setIsDeletingMonth(true);
+    try {
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+
+      // Buscar atividades do mês atual
+      const atividadesDoMes = atividades.filter((atividade) => {
+        const atividadeDate = new Date(atividade.data);
+        return (
+          atividadeDate.getMonth() === currentMonth &&
+          atividadeDate.getFullYear() === currentYear
+        );
+      });
+
+      if (atividadesDoMes.length === 0) {
+        toast.info("Nenhuma atividade encontrada para excluir este mês");
+        setOpenDeleteMonthDialog(false);
+        return;
+      }
+
+      const response = await fetch("/api/atividades/deletar-mes", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          month: currentMonth,
+          year: currentYear,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao excluir atividades do mês");
+      }
+
+      // Remover atividades do estado local
+      setAtividades((prev) =>
+        prev.filter((atividade) => {
+          const atividadeDate = new Date(atividade.data);
+          return !(
+            atividadeDate.getMonth() === currentMonth &&
+            atividadeDate.getFullYear() === currentYear
+          );
+        })
+      );
+
+      toast.success(
+        `${atividadesDoMes.length} atividades de ${monthNames[currentMonth]} excluídas com sucesso!`
+      );
+      setOpenDeleteMonthDialog(false);
+    } catch (error) {
+      console.error("Erro ao excluir atividades do mês:", error);
+      toast.error("Erro ao excluir atividades do mês");
+    } finally {
+      setIsDeletingMonth(false);
+    }
+  };
 
   const atividadesFiltradas = atividades.filter((atividade) => {
     const categoriaFiltrada = filtros[atividade.categoria];
@@ -1081,7 +1147,6 @@ export default function CalendarioPage() {
                       ● Andamento
                     </span>
                   )}
-                  
                 </div>
 
                 <span className="text-[10px] mt-0.5 opacity-80">
@@ -1550,6 +1615,19 @@ export default function CalendarioPage() {
                 {isCopying ? "Copiando..." : "Copiar Mês"}
               </span>
             </Button>
+            {/* NOVO BOTÃO: Deletar atividades do mês */}
+            <Button
+              variant="outline"
+              size={isMobileView ? "sm" : "default"}
+              onClick={() => setOpenDeleteMonthDialog(true)}
+              disabled={isDeletingMonth}
+              className="dark:border-red-900/30 dark:hover:bg-red-900/20 ml-2 border-red-200 hover:bg-red-50 hover:text-red-700"
+            >
+              <X className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+              <span className="hidden md:inline">
+                {isDeletingMonth ? "Excluindo..." : "Limpar Mês"}
+              </span>
+            </Button>
           </div>
 
           <div className="flex items-center space-x-1 md:space-x-2">
@@ -2006,6 +2084,51 @@ export default function CalendarioPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Dialog de confirmação para deletar atividades do mês */}
+      <Dialog
+        open={openDeleteMonthDialog}
+        onOpenChange={setOpenDeleteMonthDialog}
+      >
+        <DialogContent className="sm:max-w-[425px] dark:bg-black dark:border-red-900/30 bg-white border-2 mx-2 md:mx-0">
+          <DialogHeader>
+            <DialogTitle className="dark:text-red-100 text-red-600">
+              ⚠️ Confirmar Exclusão em Lote
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="dark:text-red-200 text-red-700 font-medium">
+              Tem certeza que deseja excluir TODAS as atividades de{" "}
+              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}?
+            </p>
+            <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+              <p className="text-sm dark:text-red-200 text-red-600">
+                📋 <strong>Esta ação não pode ser desfeita!</strong>
+                <br />
+                Todas as atividades, concluídas e pendentes, serão
+                permanentemente excluídas.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              variant="outline"
+              className="dark:border-gray-600 dark:hover:bg-gray-800"
+              onClick={() => setOpenDeleteMonthDialog(false)}
+              disabled={isDeletingMonth}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              className="dark:bg-red-900/80 dark:hover:bg-red-900 bg-red-600 hover:bg-red-700"
+              onClick={deletarAtividadesDoMes}
+              disabled={isDeletingMonth}
+            >
+              {isDeletingMonth ? "Excluindo..." : "Sim, Excluir Tudo"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
