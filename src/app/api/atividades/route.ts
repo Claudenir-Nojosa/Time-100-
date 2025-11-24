@@ -26,6 +26,10 @@ export async function GET() {
         dataConclusao: true,
         emAndamento: true,
         historicoTempo: true,
+        // 🆕 ADICIONE OS CAMPOS DE ENTREGA
+        empresaId: true,
+        obrigacaoId: true,
+        mesReferencia: true,
       },
     });
 
@@ -41,7 +45,7 @@ export async function GET() {
   }
 }
 
-// POST nova atividade
+// POST nova atividade - ATUALIZADA
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -88,7 +92,7 @@ export async function POST(request: NextRequest) {
     const novaOrdem =
       atividadesDoDia.length > 0 ? (atividadesDoDia[0].ordem || 0) + 1 : 0;
 
-    // Cria a atividade com todos os campos incluindo os novos campos de tempo
+    // Cria a atividade com todos os campos incluindo os novos campos de tempo E ENTREGA
     const atividade = await db.atividade.create({
       data: {
         nome: body.nome,
@@ -107,6 +111,10 @@ export async function POST(request: NextRequest) {
         dataConclusao: body.dataConclusao ? new Date(body.dataConclusao) : null,
         emAndamento: body.emAndamento || false,
         historicoTempo: body.historicoTempo || null,
+        // 🆕 ADICIONE OS CAMPOS DE ENTREGA
+        empresaId: body.empresaId || null,
+        obrigacaoId: body.obrigacaoId || null,
+        mesReferencia: body.mesReferencia || null,
       },
       select: {
         id: true,
@@ -126,6 +134,10 @@ export async function POST(request: NextRequest) {
         dataConclusao: true,
         emAndamento: true,
         historicoTempo: true,
+        // 🆕 INCLUA OS CAMPOS DE ENTREGA NO SELECT
+        empresaId: true,
+        obrigacaoId: true,
+        mesReferencia: true,
       },
     });
 

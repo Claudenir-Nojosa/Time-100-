@@ -61,13 +61,40 @@ interface Atividade {
   categoria: "apuracao" | "reuniao" | "diagnostico" | "outros";
   ordem?: number;
 
+  // 🆕 CAMPOS PARA VINCULAR ENTREGA
+  empresaId?: string;
+  obrigacaoId?: string;
+  mesReferencia?: string; // Formato: "YYYY-MM"
+
   // 🆕 NOVOS CAMPOS PARA CONTROLE DE TEMPO
-  tempoEstimado?: number; // em minutos
-  tempoReal?: number; // em minutos
+  tempoEstimado?: number;
+  tempoReal?: number;
   dataInicio?: Date;
   dataConclusao?: Date;
   emAndamento?: boolean;
   historicoTempo?: SessaoTrabalho[];
+}
+interface Empresa {
+  id: string;
+  codigo: string;
+  descricao: string;
+  cnpj: string;
+}
+
+interface Obrigacao {
+  id: string;
+  nome: string;
+  descricao: string;
+  categoria: string;
+}
+
+interface Entrega {
+  id: string;
+  empresaId: string;
+  obrigacaoId: string;
+  mesReferencia: string;
+  entregue: boolean;
+  dataEntrega: string | null;
 }
 
 interface SessaoTrabalho {
@@ -140,6 +167,10 @@ export default function CalendarioPage() {
   const router = useRouter();
   const [isDeletingMonth, setIsDeletingMonth] = useState(false);
   const [openDeleteMonthDialog, setOpenDeleteMonthDialog] = useState(false);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [obrigacoes, setObrigacoes] = useState<Obrigacao[]>([]);
+  const [entregas, setEntregas] = useState<Entrega[]>([]);
+  const [loadingEmpresas, setLoadingEmpresas] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [atividades, setAtividades] = useState<Atividade[]>([]);
@@ -163,7 +194,11 @@ export default function CalendarioPage() {
     horario: "",
     responsavel: session.data?.user.name || "",
     categoria: "apuracao" as "apuracao" | "reuniao" | "diagnostico" | "outros",
-    tempoEstimado: undefined as number | undefined, // 🆕 Adicione esta linha
+    tempoEstimado: undefined as number | undefined,
+    // 🆕 NOVOS CAMPOS PARA ENTREGA
+    empresaId: "" as string | undefined,
+    obrigacaoId: "" as string | undefined,
+    mesReferencia: "" as string | undefined,
   });
 
   const [filtros, setFiltros] = useState<Record<CategoriaType, boolean>>({
@@ -282,6 +317,89 @@ export default function CalendarioPage() {
       fetchAtividades();
     }
   }, [session.status]);
+  // 🆕 EFFECT PARA CARREGAR EMPRESAS E OBRIGAÇÕES
+  useEffect(() => {
+    const fetchDadosEntregas = async () => {
+      if (session.status !== "authenticated") return;
+
+      try {
+        setLoadingEmpresas(true);
+
+        // Buscar empresas
+        const resEmpresas = await fetch("/api/empresas");
+        if (resEmpresas.ok) {
+          const empresasData = await resEmpresas.json();
+          setEmpresas(empresasData);
+        }
+
+        // Buscar obrigações do usuário
+        const resObrigacoes = await fetch("/api/obrigacoes");
+        if (resObrigacoes.ok) {
+          const obrigacoesData = await resObrigacoes.json();
+          setObrigacoes(obrigacoesData);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        toast.error("Erro ao carregar empresas e obrigações");
+      } finally {
+        setLoadingEmpresas(false);
+      }
+    };
+
+    fetchDadosEntregas();
+  }, [session.status]);
+  // 🆕 FUNÇÃO PARA SINCRONIZAR ENTREGA
+  const sincronizarEntrega = async (
+    atividade: Atividade,
+    concluida: boolean
+  ) => {
+    // Verifique se todos os campos necessários estão preenchidos
+    if (
+      !atividade.empresaId ||
+      !atividade.obrigacaoId ||
+      !atividade.mesReferencia
+    ) {
+      console.log("❌ Dados insuficientes para sincronizar entrega:", {
+        empresaId: atividade.empresaId,
+        obrigacaoId: atividade.obrigacaoId,
+        mesReferencia: atividade.mesReferencia,
+      });
+      return null;
+    }
+
+    try {
+      console.log("🔄 Sincronizando entrega:", {
+        empresaId: atividade.empresaId,
+        obrigacaoId: atividade.obrigacaoId,
+        mesReferencia: atividade.mesReferencia,
+        entregue: concluida,
+      });
+
+      const response = await fetch("/api/entregas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          empresaId: atividade.empresaId,
+          obrigacaoId: atividade.obrigacaoId,
+          mesReferencia: atividade.mesReferencia,
+          entregue: concluida,
+        }),
+      });
+
+      if (response.ok) {
+        const entrega = await response.json();
+        console.log("✅ Entrega sincronizada com sucesso:", entrega);
+        return entrega;
+      } else {
+        const errorData = await response.json();
+        console.error("❌ Erro na resposta da API:", errorData);
+        return null;
+      }
+    } catch (error) {
+      console.error("💥 Erro ao sincronizar entrega:", error);
+      return null;
+    }
+  };
 
   if (session.status === "loading") {
     return <div>Carregando...</div>;
@@ -716,14 +834,25 @@ export default function CalendarioPage() {
         await pararTimer(atividade);
       }
 
+      const novaConclusao = !atividade.concluida;
+
+      // 🆕 SINCRONIZAR ENTREGA SE A ATIVIDADE ESTIVER VINCULADA
+      if (
+        atividade.empresaId &&
+        atividade.obrigacaoId &&
+        atividade.mesReferencia
+      ) {
+        await sincronizarEntrega(atividade, novaConclusao);
+      }
+
       const res = await fetch(`/api/atividades/${atividade.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...atividade,
-          concluida: !atividade.concluida,
-          dataConclusao: !atividade.concluida ? new Date() : null,
-          emAndamento: false, // Garante que para o timer ao concluir
+          concluida: novaConclusao,
+          dataConclusao: novaConclusao ? new Date() : null,
+          emAndamento: false,
         }),
       });
 
@@ -732,9 +861,13 @@ export default function CalendarioPage() {
         atividades.map((a) => (a.id === atividade.id ? atividadeAtualizada : a))
       );
 
-      // 🆕 TOASTS MELHORADOS
+      // 🆕 TOASTS MELHORADOS COM INFO DE ENTREGA
       if (atividadeAtualizada.concluida) {
-        toast.success(`✅ "${atividade.nome}" concluída!`, {
+        const mensagem = atividade.empresaId
+          ? `✅ "${atividade.nome}" concluída e entrega sincronizada!`
+          : `✅ "${atividade.nome}" concluída!`;
+
+        toast.success(mensagem, {
           description: "Duplo clique para reabrir",
           duration: 3000,
         });
@@ -789,7 +922,11 @@ export default function CalendarioPage() {
       horario: atividade.horario || "",
       responsavel: atividade.responsavel,
       categoria: atividade.categoria,
-      tempoEstimado: atividade.tempoEstimado || undefined, // 🆕 Adicione esta linha
+      tempoEstimado: atividade.tempoEstimado || undefined,
+      // 🆕 ADICIONE OS NOVOS CAMPOS
+      empresaId: atividade.empresaId || undefined,
+      obrigacaoId: atividade.obrigacaoId || undefined,
+      mesReferencia: atividade.mesReferencia || undefined,
     });
     setSelectedDate(new Date(atividade.data));
     setOpenDialog(true);
@@ -802,7 +939,11 @@ export default function CalendarioPage() {
       horario: "",
       responsavel: session.data?.user?.name || "Usuário Atual",
       categoria: "apuracao",
-      tempoEstimado: undefined, // 🆕 Adicione esta linha
+      tempoEstimado: undefined,
+      // 🆕 ADICIONE OS NOVOS CAMPOS COM VALORES PADRÃO
+      empresaId: undefined,
+      obrigacaoId: undefined,
+      mesReferencia: undefined,
     });
     setSelectedDate(date);
     setOpenDialog(true);
@@ -837,6 +978,7 @@ export default function CalendarioPage() {
 
   const handleAddAtividade = async () => {
     if (!selectedDate || !novaAtividade.nome) return;
+
     try {
       const createPromise = fetch("/api/atividades", {
         method: "POST",
@@ -846,7 +988,11 @@ export default function CalendarioPage() {
           responsavelId: session.data?.user.id,
           responsavelImg: session.data?.user.image,
           data: selectedDate.toISOString(),
-          tempoEstimado: novaAtividade.tempoEstimado, // 🆕 Inclua o tempo estimado
+          tempoEstimado: novaAtividade.tempoEstimado,
+          // 🆕 INCLUIR CAMPOS DE ENTREGA
+          empresaId: novaAtividade.empresaId || null,
+          obrigacaoId: novaAtividade.obrigacaoId || null,
+          mesReferencia: novaAtividade.mesReferencia || null,
         }),
       }).then((res) => res.json());
 
@@ -859,10 +1005,19 @@ export default function CalendarioPage() {
             horario: "",
             responsavel: session.data?.user.name || "",
             categoria: "apuracao",
-            tempoEstimado: undefined, // 🆕 Adicione esta linha
+            tempoEstimado: undefined,
+            // 🆕 RESETAR CAMPOS DE ENTREGA
+            empresaId: undefined,
+            obrigacaoId: undefined,
+            mesReferencia: undefined,
           });
           setOpenDialog(false);
-          return `"${novaAtividade.nome}" criada com sucesso!`;
+
+          const mensagem = novaAtividade.empresaId
+            ? `"${novaAtividade.nome}" criada com vínculo de entrega!`
+            : `"${novaAtividade.nome}" criada com sucesso!`;
+
+          return mensagem;
         },
         error: () => `Erro ao criar "${novaAtividade.nome}"`,
       });
@@ -874,6 +1029,7 @@ export default function CalendarioPage() {
 
   const handleUpdateAtividade = async () => {
     if (!atividadeParaEditar || !novaAtividade.nome) return;
+
     try {
       const updatePromise = fetch(`/api/atividades/${atividadeParaEditar.id}`, {
         method: "PUT",
@@ -881,7 +1037,11 @@ export default function CalendarioPage() {
         body: JSON.stringify({
           ...novaAtividade,
           data: selectedDate?.toISOString(),
-          tempoEstimado: novaAtividade.tempoEstimado, // 🆕 Inclua o tempo estimado
+          tempoEstimado: novaAtividade.tempoEstimado,
+          // 🆕 INCLUIR CAMPOS DE ENTREGA
+          empresaId: novaAtividade.empresaId || null,
+          obrigacaoId: novaAtividade.obrigacaoId || null,
+          mesReferencia: novaAtividade.mesReferencia || null,
         }),
       }).then((res) => res.json());
 
@@ -899,10 +1059,18 @@ export default function CalendarioPage() {
             horario: "",
             responsavel: session.data?.user.name || "",
             categoria: "apuracao",
-            tempoEstimado: undefined, // 🆕 Reset também aqui
+            tempoEstimado: undefined,
+            empresaId: undefined,
+            obrigacaoId: undefined,
+            mesReferencia: undefined,
           });
           setOpenDialog(false);
-          return `"${novaAtividade.nome}" atualizada com sucesso!`;
+
+          const mensagem = novaAtividade.empresaId
+            ? `"${novaAtividade.nome}" atualizada com vínculo de entrega!`
+            : `"${novaAtividade.nome}" atualizada com sucesso!`;
+
+          return mensagem;
         },
         error: () => `Erro ao atualizar "${novaAtividade.nome}"`,
       });
@@ -1851,6 +2019,117 @@ export default function CalendarioPage() {
                 className="col-span-3 dark:bg-emerald-950/20 dark:border-emerald-900/30"
                 placeholder="Tempo em minutos"
               />
+            </div>
+            {/* 🆕 SEÇÃO DE VINCULO COM ENTREGA */}
+            <div className="border-t pt-4 mt-4">
+              <h4 className="font-medium mb-3 dark:text-emerald-100 text-sm">
+                📋 Vincular à Entrega (Opcional)
+              </h4>
+
+              <div className="grid gap-3">
+                {/* EMPRESA */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label
+                    htmlFor="empresa"
+                    className="text-right dark:text-emerald-200 text-sm"
+                  >
+                    Empresa:
+                  </label>
+                  <Select
+                    value={novaAtividade.empresaId || "none"}
+                    onValueChange={(value) =>
+                      setNovaAtividade({
+                        ...novaAtividade,
+                        empresaId: value === "none" ? undefined : value,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="col-span-3 dark:bg-emerald-950/20 dark:border-emerald-900/30">
+                      <SelectValue placeholder="Selecione a empresa" />
+                    </SelectTrigger>
+                    <SelectContent className="dark:bg-gray-950 dark:border-emerald-900/30 max-h-60">
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      {empresas.map((empresa) => (
+                        <SelectItem key={empresa.id} value={empresa.id}>
+                          {empresa.codigo} - {empresa.descricao}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* OBRIGAÇÃO */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label
+                    htmlFor="obrigacao"
+                    className="text-right dark:text-emerald-200 text-sm"
+                  >
+                    Obrigação:
+                  </label>
+                  <Select
+                    value={novaAtividade.obrigacaoId || "none"}
+                    onValueChange={(value) =>
+                      setNovaAtividade({
+                        ...novaAtividade,
+                        obrigacaoId: value === "none" ? undefined : value,
+                      })
+                    }
+                    disabled={!novaAtividade.empresaId}
+                  >
+                    <SelectTrigger className="col-span-3 dark:bg-emerald-950/20 dark:border-emerald-900/30">
+                      <SelectValue
+                        placeholder={
+                          novaAtividade.empresaId
+                            ? "Selecione a obrigação"
+                            : "Selecione primeiro a empresa"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent className="dark:bg-gray-950 dark:border-emerald-900/30 max-h-60">
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      {obrigacoes.map((obrigacao) => (
+                        <SelectItem key={obrigacao.id} value={obrigacao.id}>
+                          {obrigacao.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* MÊS REFERÊNCIA */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label
+                    htmlFor="mesReferencia"
+                    className="text-right dark:text-emerald-200 text-sm"
+                  >
+                    Mês Ref.:
+                  </label>
+                  <Input
+                    type="month"
+                    value={novaAtividade.mesReferencia || ""}
+                    onChange={(e) =>
+                      setNovaAtividade({
+                        ...novaAtividade,
+                        mesReferencia: e.target.value || undefined,
+                      })
+                    }
+                    className="col-span-3 dark:bg-emerald-950/20 dark:border-emerald-900/30"
+                    disabled={
+                      !novaAtividade.empresaId || !novaAtividade.obrigacaoId
+                    }
+                  />
+                </div>
+
+                {/* INFO */}
+                {novaAtividade.empresaId &&
+                  novaAtividade.obrigacaoId &&
+                  novaAtividade.mesReferencia && (
+                    <div className="col-span-4 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded">
+                      ✅ Ao concluir esta atividade, a entrega será marcada como
+                      concluída automaticamente.
+                    </div>
+                  )}
+              </div>
             </div>
           </div>
 

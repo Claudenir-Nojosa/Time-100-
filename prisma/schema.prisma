@@ -64,6 +64,8 @@ model User {
   ContribuicaoMeta ContribuicaoMeta[]
 
   obrigacaos Obrigacao[]
+
+  controleHoras ControleHoras[]
 }
 
 model Account {
@@ -135,6 +137,7 @@ model Empresa {
   analiseTributarias AnaliseTributaria[]
 
   @@map("empresas")
+  atividades Atividade[]
 }
 
 enum SituacaoEmpresa {
@@ -162,6 +165,38 @@ model RepasseEmpresa {
   @@map("repasse_empresas")
 }
 
+model ControleHoras {
+  id          String   @id @default(cuid())
+  data        DateTime // Data do registro
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  // Horários previstos
+  entradaPrevista     String  // formato: "08:00"
+  almocoSaidaPrevista String  // formato: "12:00" 
+  almocoRetornoPrevisto String // formato: "13:00"
+  saidaPrevista       String  // formato: "17:00"
+  
+  // Horários reais
+  entradaReal         String? // formato: "08:15"
+  almocoSaidaReal     String? // formato: "12:05"
+  almocoRetornoReal   String? // formato: "13:10"
+  saidaReal           String? // formato: "17:30"
+  
+  // Cálculos automáticos
+  atrasoEntrada       Int?    // minutos de atraso na entrada
+  atrasoAlmoco        Int?    // minutos de atraso no retorno do almoço
+  horasExtras         Int?    // minutos de horas extras
+  horasTrabalhadas    Int?    // minutos trabalhados no dia
+  
+  observacoes         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([userId, data])
+  @@map("controle_horas")
+}
+
 model Obrigacao {
   id        String    @id @default(cuid())
   nome      String
@@ -175,6 +210,7 @@ model Obrigacao {
 
   @@unique([nome, userId])
   @@map("obrigacoes")
+  atividades Atividade[]
 }
 
 model Entrega {
@@ -233,8 +269,17 @@ model Atividade {
   tempoReal      Int? // Tempo real gasto em minutos
   dataInicio     DateTime? // Quando a atividade foi iniciada
   dataConclusao  DateTime? // Quando a atividade foi concluída
-  emAndamento    Boolean   @default(false) // Se está sendo trabalssshada no momento
+  emAndamento    Boolean   @default(false) // Se está sendo trabalhada no momento
   historicoTempo Json? // Array de sessões de trabalho {inicio, fim, duracao}
+
+  // 🆕 NOVOS CAMPOS PARA VINCULAR ENTREGA
+  empresaId     String?   // Vincular a empresa
+  obrigacaoId   String?   // Vincular a obrigação
+  mesReferencia String?   // Mês de referência da entrega
+
+  // 🆕 RELACIONAMENTOS OPCIONAIS
+  empresa   Empresa?   @relation(fields: [empresaId], references: [id])
+  obrigacao Obrigacao? @relation(fields: [obrigacaoId], references: [id])
 }
 
 model Pendencia {

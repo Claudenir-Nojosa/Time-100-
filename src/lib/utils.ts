@@ -34,3 +34,18 @@ export function formatResponsavel(responsavel: string): string {
   
   return formatMap[responsavel] || responsavel;
 }
+
+export function formatarMinutos(minutos: number | undefined): string {
+  if (!minutos || minutos <= 0) return '0min';
+  
+  const horas = Math.floor(minutos / 60);
+  const mins = minutos % 60;
+  
+  if (horas > 0 && mins > 0) {
+    return `${horas}h${mins.toString().padStart(2, '0')}m`;
+  } else if (horas > 0) {
+    return `${horas}h`;
+  } else {
+    return `${mins}min`;
+  }
+}

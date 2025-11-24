@@ -27,6 +27,10 @@ export async function PUT(
           : undefined,
         emAndamento: body.emAndamento,
         historicoTempo: body.historicoTempo,
+        // 🆕 ADICIONE OS CAMPOS DE ENTREGA
+        empresaId: body.empresaId,
+        obrigacaoId: body.obrigacaoId,
+        mesReferencia: body.mesReferencia,
       },
       select: {
         id: true,
@@ -46,6 +50,10 @@ export async function PUT(
         dataConclusao: true,
         emAndamento: true,
         historicoTempo: true,
+        // 🆕 INCLUA OS CAMPOS DE ENTREGA NO SELECT
+        empresaId: true,
+        obrigacaoId: true,
+        mesReferencia: true,
       },
     });
 
