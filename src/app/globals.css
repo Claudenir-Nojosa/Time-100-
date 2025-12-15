@@ -338,3 +338,123 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+/* app/globals.css */
+.jupyter-layout {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+/* Simular o layout do Jupyter */
+.notebook-container {
+  display: flex;
+  background: #fafafa;
+}
+
+.cell-prompt {
+  width: 64px;
+  min-width: 64px;
+  text-align: right;
+  padding-right: 12px;
+  user-select: none;
+  color: #808080;
+  font-size: 12px;
+}
+
+.cell-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Estilo do input cell */
+.input-cell {
+  border: 1px solid #cfcfcf;
+  border-radius: 2px;
+  background: white;
+}
+
+.input-cell textarea {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #000;
+  border: none;
+  padding: 10px;
+  width: 100%;
+  resize: vertical;
+  background: transparent;
+}
+
+.input-cell textarea:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px #4c8bf5;
+}
+
+/* Estilo do output cell */
+.output-cell {
+  border: 1px solid #cfcfcf;
+  border-top: none;
+  background: white;
+}
+
+.output-pre {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #303030;
+  padding: 10px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Cores específicas para código Python */
+.code-python {
+  color: #0000ff;
+}
+
+.code-keyword {
+  color: #0000ff;
+  font-weight: bold;
+}
+
+.code-string {
+  color: #008000;
+}
+
+.code-comment {
+  color: #008000;
+  font-style: italic;
+}
+
+.code-number {
+  color: #098658;
+}
+
+/* Botões estilo Jupyter */
+.jupyter-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  font-size: 12px;
+  border: 1px solid #d0d0d0;
+  background: #f0f0f0;
+  color: #333;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s;
+}
+
+.jupyter-button:hover {
+  background: #e0e0e0;
+  border-color: #b0b0b0;
+}
+
+.jupyter-button-primary {
+  background: #4c8bf5;
+  color: white;
+  border-color: #3a7ce0;
+}
+
+.jupyter-button-primary:hover {
+  background: #3a7ce0;
+}
