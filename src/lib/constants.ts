@@ -140,3 +140,43 @@ export const PRICING_CARDS = [
 export const PRICING_PLANS = { proplan: 'Pro Plan', freeplan: 'Free Plan' };
 
 export const MAX_FOLDERS_FREE_PLAN = 3;
+
+export const CATEGORIAS_export = {
+  apuracao: {
+    label: "Apuração",
+    cor: "bg-blue-100 text-blue-800 border-blue-200",
+    corConcluida: "bg-green-100 text-green-800 border-green-200",
+    corEscura: "bg-blue-500",
+    corExcel: "DBEAFE",
+  },
+  reuniao: {
+    label: "Reunião",
+    cor: "bg-cyan-100 text-cyan-800 border-cyan-200",
+    corConcluida: "bg-green-100 text-green-800 border-green-200",
+    corEscura: "bg-cyan-500",
+    corExcel: "E0F2FE",
+  },
+  diagnostico: {
+    label: "Diagnóstico",
+    cor: "bg-orange-100 text-orange-800 border-orange-200",
+    corConcluida: "bg-green-100 text-green-800 border-green-200",
+    corEscura: "bg-orange-500",
+    corExcel: "FEF3C7",
+  },
+  outros: {
+    label: "Outros",
+    cor: "bg-gray-100 text-gray-800 border-gray-200",
+    corConcluida: "bg-green-100 text-green-800 border-green-200",
+    corEscura: "bg-gray-200",
+    corExcel: "F3F4F6",
+  },
+  script: {
+    label: "Script",
+    cor: "bg-green-100 text-green-800 border-green-200",
+    corConcluida: "bg-green-100 text-green-800 border-green-200",
+    corEscura: "bg-green-500",
+    corExcel: "D1FAE5",
+  },
+} as const;
+
+export const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];

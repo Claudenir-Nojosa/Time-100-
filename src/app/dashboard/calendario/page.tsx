@@ -48,6 +48,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { ExportButtons } from "@/components/shared/ExportButtons";
+import { CATEGORIAS_export } from "@/lib/constants";
 
 interface Atividade {
   id: string;
@@ -1769,6 +1771,13 @@ export default function CalendarioPage() {
                 </div>
               </PopoverContent>
             </Popover>
+
+            {/* Botões de exportação */}
+            <ExportButtons
+              currentDate={currentDate}
+              atividades={atividades}
+              monthNames={monthNames}
+            />
 
             {/* NOVO BOTÃO: Copiar para o próximo mês */}
             <Button
